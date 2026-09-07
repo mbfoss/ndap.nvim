@@ -1,0 +1,808 @@
+*ndap*                              A Debug Adapter Protocol client for Neovim
+
+==============================================================================
+Table of Contents                                     *ndap-table-of-contents*
+
+1. Requirements                                            |ndap-requirements|
+2. Installation                                            |ndap-installation|
+3. Quick start                                              |ndap-quick-start|
+4. Adapters                                                    |ndap-adapters|
+5. Starting a debug session                                    |ndap-sessions|
+  - From the command line                                 |ndap-start-command|
+  - Run files                                                 |ndap-run-files|
+  - :Ndap new_run_file                               |ndap-:ndap-new_run_file|
+  - :Ndap adapter_info                               |ndap-:ndap-adapter_info|
+  - From Lua                                                    |ndap-lua-api|
+6. Breakpoints                                              |ndap-breakpoints|
+7. The debug UI                                                      |ndap-ui|
+  - Debug view                                               |ndap-debug-view|
+  - The panel                                                     |ndap-panel|
+  - Inline variable values                                |ndap-inline-values|
+  - Run buffers                                             |ndap-run-buffers|
+  - Inspect, disassembly & REPL                            |ndap-inspect-repl|
+  - Right-click menu                                         |ndap-popup-menu|
+8. Stepping & execution control                                |ndap-stepping|
+9. Configuration                                                 |ndap-config|
+10. Command reference                                          |ndap-commands|
+11. Persistence                                             |ndap-persistence|
+12. Health check                                                 |ndap-health|
+13. Keymaps example                                             |ndap-keymaps|
+14. Adding a custom adapter                             |ndap-custom-adapters|
+  - Why modes declare inputs                                     |ndap-inputs|
+15. License                                                     |ndap-license|
+
+  [!NOTE] **Work in progress.** The plugin is stable and usable, but it is still
+  evolving. Breaking changes can happen at any time. Pin a commit if you need a
+  fixed version.
+A **Debug Adapter Protocol (DAP) client for Neovim**. It sets breakpoints,
+pauses programs, inspects variables and the call stack, and steps through
+execution. It implements the protocol directly and works with any debugger
+<https://wiki.archlinux.org/title/Debug_adapter_protocol> that supports DAP.
+
+
+==============================================================================
+1. Requirements                                            *ndap-requirements*
+
+- Neovim >= 0.10
+- A debug adapter for the target language (gdb, debugpy, …). Many are
+    available through mason.nvim <https://github.com/mason-org/mason.nvim>,
+    which is not required.
+
+
+==============================================================================
+2. Installation                                            *ndap-installation*
+
+- Install it with any plugin manager, then call `require("ndap").setup()` once
+    from your config. Nothing is registered until you do.
+- Adapter definitions come from one of two places. Either install ndap-adapters
+    <https://github.com/mbfoss/ndap-adapters.nvim>, which provides definitions for
+    common debuggers (the examples below assume it), or put a single definition
+    file (|ndap-your-own|, or one copied from ndap-adapters) in an `ndap-adapters/`
+    directory on the runtimepath, such as `~/.config/nvim/ndap-adapters/`.
+
+Native packages / vim.pack ~
+
+>lua
+    -- Neovim 0.12+
+    vim.pack.add({
+      "https://github.com/mbfoss/ndap.nvim",
+      "https://github.com/mbfoss/ndap-adapters.nvim",  -- ready-made adapter definitions
+    })
+    
+    require("ndap").setup({}) -- required; pass options here
+<
+
+lazy.nvim ~
+
+>lua
+    {
+      "mbfoss/ndap.nvim",
+      dependencies = { "mbfoss/ndap-adapters.nvim" },  -- ready-made adapter definitions
+      lazy = false, -- setup() registers :Ndap and restores saved breakpoints
+      opts = {}, -- required; passed to require("ndap").setup()
+    }
+<
+
+`setup()` is required. It applies your options, registers the `:Ndap` command,
+and installs the persistence autocommands. `setup({})` with no options is fine;
+options you leave out keep their defaults.
+
+
+==============================================================================
+3. Quick start                                              *ndap-quick-start*
+
+`:Ndap start` launches or attaches to an adapter using one of its named modes,
+filling in its inputs with `--name value` flags:
+
+>vim
+    " Launch a native binary under codelldb
+    :Ndap start codelldb binary --program ./program
+    
+    " Debug a Python file
+    :Ndap start debugpy script --program ./main.py
+    
+    " Attach to a running process (opens process selector)
+    :Ndap start codelldb attach
+<
+
+Set a breakpoint on the current line and step through the program:
+
+>vim
+    :Ndap breakpoint          " toggle a breakpoint at the cursor
+    :Ndap continue            " run to the next breakpoint
+    :Ndap step_over           " step over the current line
+<
+
+The debug view opens automatically when a session starts, showing the call
+stack, variables and breakpoints. See |ndap-ui| and
+|ndap-keymaps| for a convenient setup.
+
+
+==============================================================================
+4. Adapters                                                    *ndap-adapters*
+
+To debug a language, ndap needs an **adapter definition**: a description of how
+to reach that language’s debug adapter. It is one `ndap-adapters/<name>.lua`
+file on the runtimepath, keyed by its filename stem.
+
+Each adapter declares one or more named **modes** (`binary`, `script`,
+`attach`, `remote`, …), and each mode declares the **inputs** it accepts.
+
+The ndap-adapters <https://github.com/mbfoss/ndap-adapters.nvim> plugin
+provides definitions for common debuggers. Installing it makes those adapters
+available.
+
+`:Ndap adapter_info` reports which modes an adapter has and what inputs each
+mode takes:
+
+>vim
+    :Ndap adapter_info            " every available adapter, by name
+    :Ndap adapter_info codelldb   " that adapter's modes and each mode's inputs
+<
+
+ndap itself ships one adapter, `remote`. It connects to a DAP server already
+listening on `host:port` and has a single `connect` mode:
+
+>vim
+    :Ndap start remote connect --host 127.0.0.1 --port 4711
+<
+
+A definition is read on first use, such as a `:Ndap start <adapter> ...`.
+Listing adapters does not load their definitions (`:Ndap adapter_info`,
+`:checkhealth ndap`); `:Ndap adapter_info <adapter>` does, and reports the
+modes it supports along with any error in the definition.
+
+
+==============================================================================
+5. Starting a debug session                                    *ndap-sessions*
+
+There are two ways to start a debug session: from the command line, or from a
+run file.
+
+
+FROM THE COMMAND LINE                                     *ndap-start-command*
+
+>vim
+    :Ndap start <adapter> <mode> [--input value ...]
+<
+
+Each input is written as its `--name` followed by its values. How many values
+it takes depends on the kind the adapter declares:
+
+- **Single value**: exactly one. `--port 4711`
+- **Boolean**: true when the flag stands alone, else one value.
+    `--stop_on_entry`, `--stop_on_entry false`
+- **List**: one value per argument. `--args a b c` is three entries
+- **Map**: one `KEY=VALUE` per argument. `--env A=1 B=2` is two pairs
+
+A `--name` that is not one of the mode’s inputs is refused, and the message
+lists the ones that are.
+
+Values split on whitespace, and quotes are not special. A backslash escapes two
+characters: a space, as in `my\ app`, and another backslash, as in `C:\\src`.
+Everything else is literal, commas included.
+
+>vim
+    :Ndap start gdb binary --program ./my\ app --cwd /tmp/my\ project
+<
+
+A map’s key ends at its first `=`. A value is always its own argument, so
+`--port=4711` is refused, and the message names the input it looks like.
+
+A value that reads as a flag, such as the debuggee’s own `--verbose`, needs a
+bare `--` in front of it. That marks the next token as a value, however it is
+spelled:
+
+>vim
+    :Ndap start gdb binary --program ./app --args -- --verbose
+    :Ndap start gdb binary --program ./app --args -- --verbose -- --config=/x
+    :Ndap start gdb binary --program ./app --env RUST_LOG=debug NO_COLOR=1
+    :Ndap start remote connect --host 127.0.0.1 --port 4711
+<
+
+One `--` marks one token, so a run of `--`-prefixed arguments takes one each. A
+trailing `--` marks nothing, and `--` with no input open is refused.
+
+**Tab-completion** offers adapters, then mode names, then the mode’s inputs
+as `--name`, then a value once a flag is open: paths for the path-like inputs,
+`true`/`false` for a boolean. A token after a bare `--` completes as a value,
+`--`-prefixed or not.
+
+
+RUN FILES                                                     *ndap-run-files*
+
+A run file is a Lua file returning a table of session parameters, the Lua
+equivalent of the `:Ndap start ...` arguments:
+
+>lua
+    -- debug.lua
+    return {
+      name       = "debug app",    -- run label (defaults to "debug")
+      adapter    = "codelldb",     -- an entry in require("ndap").adapters
+      mode       = "binary",       -- one of the adapter's named modes
+      parameters = {               -- answers to the mode's declared inputs
+        program = "./build/app",
+        args    = { "--verbose" },
+        cwd     = vim.fn.getcwd(),
+      },
+    }
+<
+
+Use `:Ndap start_file <file/dir>` to load and start a session from a run file.
+
+>vim
+    :Ndap start_file debug.lua
+    :Ndap start_file ./debug/   " picker over the folder's run files
+<
+
+
+:NDAP NEW_RUN_FILE                                   *ndap-:ndap-new_run_file*
+
+Generate a run file from one of an adapter’s modes. Required inputs are
+written active; every other input is listed commented out with its description:
+
+>vim
+    :Ndap new_run_file codelldb binary
+    " → writes <project root>/codelldb_launch.lua and opens it
+<
+
+Fill in the `parameters`, then `:Ndap start_file` it; it resolves through the
+same path as `:Ndap start`.
+
+
+:NDAP ADAPTER_INFO                                   *ndap-:ndap-adapter_info*
+
+Load an adapter’s definition, check it, and show what it accepts in a
+markdown float rendered from the definition itself. A `status` section gives
+where the executable resolved to and anything wrong with the definition, and is
+left out when there is nothing to report. A `modes` section follows, with one
+subsection per mode: its request kind, its description, and a table of every
+input with its type and meaning. Required inputs sort first and are marked
+`[required]`.
+
+
+FROM LUA                                                        *ndap-lua-api*
+
+Everything above is available programmatically:
+
+>lua
+    local ndap = require("ndap")
+    
+    -- The start_mode / start_file / new_run_file / rerun entry points
+    ndap.start_mode("debugpy", "script", { program = "./main.py" })
+    ndap.start_file("debug.lua")
+    ndap.rerun()
+<
+
+
+==============================================================================
+6. Breakpoints                                              *ndap-breakpoints*
+
+All breakpoint operations are grouped under `:Ndap breakpoint <sub>`.
+Breakpoints work before a session starts and are synced live to running
+sessions.
+
+>vim
+    :Ndap breakpoint               " toggle a line breakpoint at the cursor
+    :Ndap breakpoint toggle        " the same, spelled out
+    :Ndap breakpoint condition     " condition + hit condition (prompts)
+    :Ndap breakpoint logpoint      " logpoint (prompts for log message)
+    :Ndap breakpoint column        " toggle a column bp at the cursor word
+    :Ndap breakpoint fn <name>     " function breakpoint by name
+    :Ndap breakpoint data          " watchpoint on a variable/expression
+    :Ndap breakpoint list          " fuzzy-pick and jump to any breakpoint
+    :Ndap breakpoint exception_filter              " toggle an adapter filter
+    :Ndap breakpoint exception_type <name> [mode]  " named exception type
+<
+
+`column` toggles a column breakpoint at the start of the word under the cursor.
+A breakpoint shown in that word is removed; otherwise one is created. A session
+whose adapter cannot place breakpoints by column is not sent them, and reports
+them unverified.
+
+Once a session is live the adapter may bind a breakpoint to a different line or
+column than requested; the marker follows it, and every command acts on where a
+breakpoint is shown rather than where it was asked for.
+
+Every per-breakpoint subcommand (`condition`, `logpoint`, `remove`, the enable
+state) acts on the breakpoint the cursor resolves to. A column breakpoint under
+the cursor always wins; otherwise the editing subcommands assume the line
+breakpoint, while `remove` asks, so a line carrying both never loses the wrong
+one to a guess.
+
+Enable/disable without removing, and clear in bulk:
+
+>vim
+    :Ndap breakpoint toggle_enabled  " enable/disable the one at the cursor
+    :Ndap breakpoint disable_all
+    :Ndap breakpoint clear_file      " remove every breakpoint in the file
+    :Ndap breakpoint clear_all       " remove every breakpoint everywhere
+<
+
+`clear_all` removes all source, function and exception-type breakpoints across
+every file. Adapter exception filters have no removed state, so they are turned
+off instead.
+
+Gutter signs distinguish each kind (verified or pending, conditional, logpoint,
+disabled, exception). The full list of subcommands is in the
+|ndap-commands|, and the glyphs are set with the `symbols` option in
+|ndap-config|.
+
+
+==============================================================================
+7. The debug UI                                                      *ndap-ui*
+
+
+DEBUG VIEW                                                   *ndap-debug-view*
+
+The debug view is a tree of **sessions → threads → stack frames → scopes
+→ variables**, plus **watch expressions** and **breakpoints**. It opens
+automatically when a session starts; open or focus it any time with `:Ndap` (or
+`:Ndap view`). `:Ndap view hide` closes it, and `:Ndap view toggle` switches
+between them.
+
+Inside the view:
+
+  -------------------------------------------------------------------------
+  Key    Action
+  ------ ------------------------------------------------------------------
+  <CR>   Expand/collapse, select a session, switch to a frame, or jump to a
+         frame’s or breakpoint’s source, focusing it
+
+  o      Jump to a frame’s or breakpoint’s source, keeping the view focused
+
+  K      Show the full value / frame details / exception info / breakpoint
+         details
+
+  i      Add a watch expression, a function breakpoint, or a data
+         breakpoint (on a variable)
+
+  d      Remove the watch expression or breakpoint under the cursor
+
+  r      Rename the watch expression under the cursor
+
+  x      Toggle the breakpoint under the cursor enabled/disabled
+
+  c      Change a value / breakpoint condition / exception break mode /
+         data access type
+
+  g?     Show this keymap cheatsheet
+
+  zo zc  Fold controls (expand / collapse / toggle / all)
+  za zO  
+  zC     
+  -------------------------------------------------------------------------
+
+THE PANEL                                                         *ndap-panel*
+
+A run spawns several buffers: Terminal, Output, REPL, its progress Log, and DAP
+messages. They share one bottom split, the panel, which shows whichever buffer
+has the highest priority: Terminal over Output, Output over REPL, REPL over
+Log. It opens with the run’s first buffer, follows as higher-priority buffers
+appear or the shown one is deleted, and closes with the run’s last buffer.
+`:Ndap panel` toggles it; `panel_auto_open` and `panel_height_ratio` adjust it.
+
+Each run keeps its own log, `ndap://<number>/<name>:log`, wiped with the run.
+Any of a run’s buffers can be reached by name; see |ndap-run-buffers|.
+
+
+INLINE VARIABLE VALUES                                    *ndap-inline-values*
+
+While stopped, ndap renders variable values inline in the source. Choose the
+placement with the `inline_vars` option (`inline`, `eol`, `eol_right_align`,
+`right_align`, or `off`). See |ndap-config|.
+
+
+RUN BUFFERS                                                 *ndap-run-buffers*
+
+A run’s buffers are listed under its session row in the debug view; `<CR>` on
+one opens it in a regular window:
+
+- **REPL**: Debugger interactive console
+- **Output**: the debuggee’s output
+- **Terminal**: when the adapter launches the debuggee in a terminal
+
+Adapters that offer an external console (`console = externalTerminal`,
+codelldb’s `terminal = external`) launch the debuggee in a terminal emulator
+of its own instead, chosen by the `external_terminal` option; see
+|ndap-config|. If that option is unset or the emulator cannot be
+spawned, the request fails rather than falling back to an integrated terminal.
+
+>vim
+    :Ndap clean            " drop finished runs and wipe their buffers
+<
+
+
+INSPECT, DISASSEMBLY & REPL                                *ndap-inspect-repl*
+
+>vim
+    :Ndap inspect          " hover the word under the cursor (or, in visual
+                            " mode, the selected expression)
+    :Ndap value            " same target, but shows the full value straight
+                            " away instead of the expandable tree
+    :Ndap disassemble      " open the disassembly view for the current frame
+    :Ndap exception_info   " details of the exception at the current stop
+<
+
+In the disassembly view, `<CR>` opens the corresponding source line and moves
+into it, `o` opens it with the pane keeping focus, and `K` shows the
+instruction reference. Breakpoints and stepping become instruction-level while
+it is focused.
+
+
+RIGHT-CLICK MENU                                             *ndap-popup-menu*
+
+While a session is live, ndap adds a **Debug Inspect** entry to the right-click
+menu, which inspects the word clicked on (or the selection, in visual mode). It
+appears with the first session and is removed with the last, so the stock menu
+is untouched when nothing is being debugged. Set `popup_menu = false` in
+|ndap-config| to leave the menu alone entirely.
+
+The entry needs a GUI or a terminal with mouse support.
+
+
+==============================================================================
+8. Stepping & execution control                                *ndap-stepping*
+
+>vim
+    :Ndap continue         " continue the active session
+    :Ndap continue_all     " continue every session
+    :Ndap step_over        " (alias: :Ndap next)
+    :Ndap step_in
+    :Ndap step_out
+    :Ndap step_in_target   " pick which call on the line to step into
+    :Ndap step_back        " reverse debugging (adapter permitting)
+    :Ndap reverse_continue
+    :Ndap jump_to_cursor   " set the next statement to the cursor line
+    :Ndap restart_frame    " restart the selected stack frame
+    :Ndap pause
+    :Ndap restart          " DAP restart request on the live session
+    :Ndap stop             " stop the active session
+    :Ndap stop_all         " stop every session
+<
+
+Stepping granularity follows the focused window: line-wise everywhere, and
+instruction-wise while the disassembly view is current.
+
+Commands the adapter has not advertised (`step_back`, `reverse_continue`,
+`step_in_target`, `restart`, `jump_to_cursor`, `restart_frame`) report this in
+a notification instead of doing nothing.
+
+Switch the active target with pickers:
+
+>vim
+    :Ndap session          " choose the active session
+    :Ndap thread           " choose the active thread
+    :Ndap frame            " choose the active stack frame
+<
+
+
+==============================================================================
+9. Configuration                                                 *ndap-config*
+
+Pass options to `setup()`. Defaults when `setup({})` is called are:
+
+>lua
+    require("ndap").setup({
+      -- Project detection: the nearest ancestor holding one of these is
+      -- the root.
+      root_markers        = { ".git" },
+      -- Per-project state file, written at the project root.
+      data_filename       = ".ndap.json",
+    
+      -- Adapters to make available, by name. Unset (the default) leaves every
+      -- registered adapter available; a list narrows the registry to exactly
+      -- those names, hiding the rest from listing, completion and `:Ndap start`.
+      enabled_adapters = nil, -- { "debugpy", "codelldb" },
+    
+      -- Max call-stack frames shown (extended when the frame is deeper).
+      stack_trace_limit   = 10,
+      -- Delay (ms) before clearing stale UI, to avoid flicker while stepping.
+      antiflicker_delay   = 200,
+      -- Max lines kept in Output / DAP-message buffers (0 = unlimited).
+      output_max_lines    = 10000,
+      -- Open the panel as soon as a run registers a buffer.
+      panel_auto_open = true,
+      -- Height of the panel, as a fraction of the editor.
+      panel_height_ratio = 0.25,
+      -- Width of the debug view on first open, as a fraction of the
+      -- editor's columns.
+      debug_view_width_ratio = 0.2,
+      -- Side the debug view splits off on: "left" | "right".
+      debug_view_position = "left",
+    
+      -- Inline value placement: "inline" | "eol" | "eol_right_align"
+      -- | "right_align" | "off"
+      inline_vars         = "eol",
+    
+      -- Log every DAP message to a "dap" buffer. For debugging ndap or an
+      -- adapter; leave off otherwise.
+      raw_messages        = false,
+    
+      -- Terminal emulator (command + args) used when an adapter asks to
+      -- run the debuggee in an external terminal; its command line is
+      -- appended. Unset, an integrated terminal is used instead.
+      -- E.g. { "alacritty", "-e" }.
+      -- A string is split on whitespace and quote characters are
+      -- ordinary, so a path with spaces needs the list form.
+      -- external_terminal = { "wezterm", "start", "--" },
+    
+      -- Add a "Debug Inspect" entry to the right-click menu while a session is
+      -- live
+      popup_menu          = true,
+    
+      -- Glyphs for each debug state, in the gutter and the debug view alike.
+      symbols = {
+        debug_frame              = "▶",   -- current execution position
+        active_breakpoint        = "●",   -- enabled + verified
+        inactive_breakpoint      = "○",   -- enabled, not yet verified
+        cond_breakpoint          = "■",   -- conditional, verified
+        inactive_cond_breakpoint = "□",
+        logpoint                 = "◆",
+        inactive_logpoint        = "◇",
+        disabled_breakpoint      = "ø",
+        disabled_cond_breakpoint = "ø",
+        disabled_logpoint        = "ø",
+        exception_breakpoint     = "↯",
+        unsupported_breakpoint   = "✗",
+      },
+    })
+<
+
+
+==============================================================================
+10. Command reference                                          *ndap-commands*
+
+Everything is under the `:Ndap` command, with completion for every subcommand.
+Bare `:Ndap`, with no subcommand, opens the debug view.
+
+To use another name such as `:Debug`, register an alias after `setup()`. It
+forwards arguments, range and completion to `:Ndap`.
+
+>lua
+    require("ndap").create_cmd_alias("Debug")
+<
+
+:Ndap subcommands ~
+
+  ---------------------------------------------------------------------------------
+  Subcommand                      Description
+  ------------------------------- -------------------------------------------------
+  start …                         Start a session (launch or attach) from flags
+
+  start_file [path]               Start a Lua run file, or pick from a directory
+
+  new_run_file …                  Generate a run file from a mode’s inputs
+
+  adapter_info [adapter] [mode]   Report an adapter’s modes, inputs and tooling
+
+  rerun                           Start a new run with the most recent config
+
+  (none) / view                   Open/focus the debug view
+
+  view toggle / view hide         Close the debug view if open / close it
+
+  panel                           Toggle the panel
+
+  continue / continue_all         Continue the active / every session
+
+  step_over (next) / step_in /    Stepping
+  step_out                        
+
+  step_in_target                  Pick a call target to step into
+
+  step_back / reverse_continue    Reverse debugging
+
+  jump_to_cursor                  Set the next statement to the cursor line
+
+  restart_frame                   Restart the selected stack frame
+
+  exception_info                  Show details of the current exception
+
+  pause / restart                 Pause / DAP-restart the session
+
+  stop / stop_all                 Stop the active / every session
+
+  session / thread /              Selection pickers
+  terminate_thread / frame        
+
+  inspect                         Hover a value (word under cursor or selection)
+
+  value                           Same, showing the full value instead of the tree
+
+  disassemble                     Open the disassembly view
+
+  clean                           Drop finished runs and wipe their buffers
+
+  project                         Report the resolved project root
+
+  breakpoint …                    Breakpoint subcommands (below)
+  ---------------------------------------------------------------------------------
+:Ndap breakpoint subcommands ~
+
+  -----------------------------------------------------------------------------
+  Subcommand                     Description
+  ------------------------------ ----------------------------------------------
+  toggle (default)               Toggle a line breakpoint at the cursor
+
+  column                         Toggle a column breakpoint at the cursor word
+
+  remove                         Remove the breakpoint at the cursor
+
+  condition                      Set condition + hit condition
+
+  logpoint                       Set/clear a log message (logpoint)
+
+  enable / disable /             Per-breakpoint enable state
+  toggle_enabled                 
+
+  enable_all / disable_all       Bulk enable/disable
+
+  clear_file / clear_fn          Clear the current file / function breakpoints
+
+  clear_all                      Clear all; disable exception filters
+
+  fn [name]                      Toggle a function breakpoint
+
+  exception_filter               Toggle an adapter exception filter
+
+  exception_type [name] [mode]   Break on a named exception type
+
+  data [name]                    Toggle a data breakpoint / watchpoint
+
+  data_clear / data_list         Manage data breakpoints
+
+  list                           Fuzzy-pick and jump to a breakpoint
+  -----------------------------------------------------------------------------
+
+==============================================================================
+11. Persistence                                             *ndap-persistence*
+
+Breakpoints and watch expressions are saved **per project** and restored
+automatically. The project root is the nearest ancestor of the cwd containing a
+`root_markers` entry (default `.git`); state is written to a single JSON file
+at that root (`.ndap.json` by default), using project-relative paths so it
+stays portable.
+
+State is saved on leaving a project (cwd change) and on exit, and reloaded on
+entering one. Outside any project, ndap warns once that state will not be
+persisted. The current project is reported by:
+
+>vim
+    :Ndap project
+<
+
+
+  Consider adding `.ndap.json` to the project’s `.gitignore`, or commit it to
+  share breakpoints across a team.
+
+==============================================================================
+12. Health check                                                 *ndap-health*
+
+>vim
+    :checkhealth ndap
+<
+
+Reports whether the plugin is initialized, the configuration state, and which
+adapters are available.
+
+
+==============================================================================
+13. Keymaps example                                             *ndap-keymaps*
+
+ndap ships no global keymaps; any layout works.
+
+Example:
+
+>lua
+    local ndap = require("ndap")
+    ndap.setup({})
+    
+    vim.keymap.set("n", "<F5>",  "<Cmd>Ndap continue<CR>",   { desc = "Debug: continue" })
+    vim.keymap.set("n", "<F9>",  "<Cmd>Ndap breakpoint<CR>", { desc = "Debug: toggle breakpoint" })
+    vim.keymap.set("n", "<F10>", "<Cmd>Ndap step_over<CR>",  { desc = "Debug: step over" })
+    vim.keymap.set("n", "<F11>", "<Cmd>Ndap step_in<CR>",    { desc = "Debug: step in" })
+    vim.keymap.set("n", "<F12>", "<Cmd>Ndap step_out<CR>",   { desc = "Debug: step out" })
+    
+    vim.keymap.set("n", "<leader>bb", "<Cmd>Ndap breakpoint toggle<CR>", { desc = "Debug: toggle breakpoint" })
+    vim.keymap.set("n", "<leader>bc", "<Cmd>Ndap breakpoint condition<CR>", { desc = "Debug: conditional breakpoint" })
+    vim.keymap.set("n", "<leader>bL", "<Cmd>Ndap breakpoint logpoint<CR>", { desc = "Debug: logpoint" })
+    vim.keymap.set("n", "<leader>bl", "<Cmd>Ndap breakpoint list<CR>", { desc = "Debug: list breakpoints" })
+    vim.keymap.set("n", "<leader>dc", "<Cmd>Ndap continue<CR>", { desc = "Debug: continue" })
+    vim.keymap.set("n", "<leader>dq", "<Cmd>Ndap stop<CR>", { desc = "Debug: stop" })
+    vim.keymap.set("n", "<leader>dR", "<Cmd>Ndap rerun<CR>", { desc = "Debug: re-run" })
+    vim.keymap.set("n", "<leader>dv", "<Cmd>Ndap view<CR>", { desc = "Debug: focus view" })
+    vim.keymap.set("n", "<leader>dP", "<Cmd>Ndap panel<CR>", { desc = "Debug: toggle panel" })
+    
+    vim.keymap.set({ "n", "x" }, "<leader>di", ":Ndap inspect<CR>", { desc = "Debug: inspect value" })
+    
+    -- Alt keys are a compact alternative to the function keys (the steps sit on the
+    -- home row), (ensure Alt keys are supported in your terminal/client)
+    -- vim.keymap.set("n", "<A-j>", "<Cmd>Ndap step_over<CR>", { desc = "Debug: step over" })
+    -- vim.keymap.set("n", "<A-l>", "<Cmd>Ndap step_in<CR>",   { desc = "Debug: step in" })
+    -- vim.keymap.set("n", "<A-h>", "<Cmd>Ndap step_out<CR>",  { desc = "Debug: step out" })
+    -- vim.keymap.set("n", "<A-k>", "<Cmd>Ndap step_back<CR>", { desc = "Debug: step back" })
+    -- vim.keymap.set("n", "<A-;>", "<Cmd>Ndap continue<CR>",  { desc = "Debug: continue" })
+<
+
+
+==============================================================================
+14. Adding a custom adapter                             *ndap-custom-adapters*
+
+For a debugger already covered by ndap-adapters
+<https://github.com/mbfoss/ndap-adapters.nvim>, install that plugin, or copy
+the one definition file you need out of it into `ndap-adapters/` in your
+configuration folder.
+
+More generally, a definition is a single Lua file under an `ndap-adapters/`
+directory anywhere on the runtimepath, returning a table. It needs a way to
+reach the adapter (a `command` to spawn, or a `host`/`port` to connect to) and
+`modes`, each naming the `inputs` it accepts and a `build` that turns the
+`parameters` into the native DAP body:
+
+>lua
+    -- ~/.config/nvim/ndap-adapters/myadapter.lua
+    ---@type ndap.AdapterDef
+    return {
+      command = { "my-dap-adapter", "--stdio" },
+      modes   = {
+        binary = {
+          description = "debug an executable",
+          request     = "launch",
+          inputs      = {
+            program = { required = true, completion = "file", description = "executable to debug" },
+          },
+          build = function(parameters)
+            return { program = require("ndap.shared").normalize_path(parameters.program), stopOnEntry = true }
+          end,
+        },
+      },
+    }
+<
+
+`command` may also be a string, which is split on whitespace and passed through
+verbatim otherwise: quote characters are ordinary, so an adapter whose path or
+arguments contain whitespace needs the list form.
+
+`require("ndap").adapters` is writable, so a definition can also be registered
+by hand from a config file (`require("ndap").adapters.myadapter = { … }`)
+instead of from a file. `ndap.available_adapters()` lists those too, unless
+`enabled_adapters` is set and leaves the name out, which withholds it from the
+registry entirely.
+
+The full contract is in WRITING-DEFINITIONS.md in the repository.
+
+Added adapters are listed by `:checkhealth ndap` and
+`ndap.available_adapters()` too, and document themselves: `:Ndap adapter_info
+myadapter` renders the modes and inputs declared above, and, when the
+definition names a `command`, whether it is present on this machine.
+
+
+WHY MODES DECLARE INPUTS                                         *ndap-inputs*
+
+Modes declare `inputs` instead of taking a raw DAP body. This provides:
+
+- **Completion.** `:Ndap start lldb binary <Tab>` lists that mode’s inputs as
+    `--name`, and `--program <Tab>` completes paths because the input is declared
+    path-like.
+- **Validation before launch.** Missing required inputs, a port outside
+    0–65535, or a malformed `KEY=VALUE` are reported during resolution, with the
+    input named, instead of as adapter stderr.
+- **Generated run files.** `:Ndap new_run_file` writes a run file from
+    `inputs`, including each field’s description, so no template can diverge from
+    what the adapter accepts.
+- **One value, two entry points.** An input can be supplied on the command line
+    or in a run file (`env` as `--env A=1 B=2` or as a table); both resolve through
+    the same declaration into the same `build`.
+- **Mode-supplied defaults.** A mode can act on a missing input instead of
+    omitting the field.
+
+
+==============================================================================
+15. License                                                     *ndap-license*
+
+MIT <LICENSE>.
+
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
+
+vim:tw=78:ts=8:noet:ft=help:norl:

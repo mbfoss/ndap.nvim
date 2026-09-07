@@ -1,0 +1,78 @@
+# Demo 4: Inspect the identifier under the cursor, add a watch expression in
+# the debug view, and write a new value into the running program.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/04-watch-inspect.gif
+cast ../out/04-watch-inspect.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+key :e series.py<CR>
+sleep 600ms
+
+caption Break where the values are live
+key :45<CR>
+sleep 400ms
+type :Ndap breakpoint
+key <CR>
+sleep 700ms
+
+type :Ndap start debugpy script --program series.py
+key <CR>
+wait \[paused\]
+sleep 1800ms
+
+caption Inspect the object under the cursor
+type :Ndap inspect
+key <CR>
+sleep 2200ms
+key <CR>
+sleep 1500ms
+key <Esc>
+sleep 800ms
+
+caption Add a watch expression · i to insert
+key <C-w>h
+sleep 600ms
+key /Expressions<CR>
+sleep 600ms
+key i
+sleep 600ms
+type item.total + amount
+key <CR>
+sleep 2500ms
+
+caption Change amount in the variables tree · c to edit
+key gg
+key /amount:<CR>
+sleep 800ms
+key c
+sleep 600ms
+key <C-u>
+type 250.0
+key <CR>
+sleep 2500ms
+
+caption The new value reaches the program
+key <C-w>l
+sleep 600ms
+type :Ndap step_over
+key <CR>
+wait 46/66
+sleep 1200ms
+type :Ndap step_over
+key <CR>
+wait 47/66
+sleep 2500ms
+
+type :Ndap stop
+key <CR>
+sleep 1200ms

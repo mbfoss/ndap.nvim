@@ -1,0 +1,53 @@
+# Demo 6: Move the execution point to the cursor, then step into a call and
+# back out; the return value shows up in the locals.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/06-step-in-jump.gif
+cast ../out/06-step-in-jump.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+key :e series.py<CR>
+sleep 600ms
+
+key :59<CR>
+sleep 400ms
+type :Ndap breakpoint
+key <CR>
+sleep 700ms
+
+type :Ndap start debugpy script --program series.py
+key <CR>
+wait \[paused\]
+sleep 1800ms
+
+caption Jump to the cursor  ·  skip the line in between
+key :60<CR>
+sleep 500ms
+type :Ndap jump_to_cursor
+key <CR>
+sleep 2200ms
+
+caption Step into scale
+type :Ndap step_in
+key <CR>
+wait 26/66
+sleep 2000ms
+
+caption Step out  ·  the return value lands in the locals
+type :Ndap step_out
+key <CR>
+wait 60/66
+sleep 2500ms
+
+type :Ndap stop
+key <CR>
+sleep 1200ms

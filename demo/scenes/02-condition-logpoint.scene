@@ -1,0 +1,59 @@
+# Demo 2: A conditional breakpoint that only fires above a threshold, and a
+# logpoint that prints on every call without pausing.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/02-condition-logpoint.gif
+cast ../out/02-condition-logpoint.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+key :e series.py<CR>
+sleep 600ms
+
+caption Conditional breakpoint  ·  stop only when amount > 50
+key :26<CR>
+sleep 400ms
+type :Ndap breakpoint condition
+key <CR>
+wait Condition
+sleep 300ms
+type amount > 50
+key <CR>
+wait Hit condition
+key <CR>
+sleep 900ms
+
+caption Logpoint  ·  print every scaling call
+key :46<CR>
+sleep 400ms
+type :Ndap breakpoint logpoint
+key <CR>
+wait Log message
+sleep 300ms
+type scaling {item.name} by {amount}
+key <CR>
+sleep 900ms
+
+caption Launch under debugpy
+type :Ndap start debugpy script --program series.py
+key <CR>
+wait \[paused\]
+sleep 3000ms
+
+caption Continue  ·  calls keep logging, the breakpoint holds
+type :Ndap continue
+key <CR>
+wait scaling cubes by 60
+sleep 2000ms
+
+type :Ndap stop
+key <CR>
+sleep 1500ms

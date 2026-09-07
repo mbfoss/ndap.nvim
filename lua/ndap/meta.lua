@@ -1,0 +1,110 @@
+---@meta
+error("do not require a meta file")
+
+---@brief Declaration-only types: the adapter definition an `ndap-adapters/`
+---file returns, and the public surface of the plugin.
+
+---The public surface `require("ndap")` returns. Declared here, in a meta file,
+---rather than inferred from `M` in [init.lua](init.lua): a plugin that sees ndap
+---only as a LuaLS workspace library resolves a class by name, but not fields
+---inferred from a local. `init.lua` carries `---@type ndap.Module` so the two
+---cannot drift.
+---@class ndap.Module
+---@field config                ndap.Config
+---@field adapters              table<string, ndap.AdapterDef>
+---@field save_state            fun()
+---@field reload_state          fun()
+---@field shutdown              fun()
+---@field open_debug_view       fun()
+---@field close_debug_view      fun()
+---@field toggle_debug_view     fun()
+---@field open_disassembly_view fun()
+---@field start_file            fun(path: string): ndap.runner.Run?
+---@field new_run_file          fun(assignments: string[]): string?
+---@field available_adapters    fun(): string[]
+---@field load_adapter          fun(adapter: string): ndap.AdapterDef?, string?
+---@field mode                  fun(adapter: string, name: string): ndap.Mode?
+---@field mode_names            fun(adapter: string): string[]
+---@field mode_inputs           fun(adapter: string, mode_name: string): table<string, ndap.Input>
+---@field mode_required         fun(adapter: string, mode_name: string): string[]
+---@field input_seed            fun(input: ndap.Input?): any
+---@field adapter_info          fun(adapter?: string, mode?: string)
+---@field start_mode            fun(adapter: string, mode: string, parameters?: table<string, any>, presenter?: ndap.runner.Presenter): ndap.runner.Run?
+---@field remove_run            fun(run: ndap.runner.Run)
+---@field rerun                 fun()
+---@field clean                 fun()
+---@field project_info          fun()
+---@field is_setup              fun(): boolean
+---@field get_default_config    fun(): ndap.Config
+---@field create_cmd_alias      fun(name: string): boolean
+---@field setup                 fun(opts?: ndap.Config)
+
+---`mode` names the mode the run was resolved from, which the config itself
+---does not record; it is how a `setup` gates one mode rather than the whole
+---adapter (e.g. a feature only a newer binary supports). A `setup` should still
+---treat nil as "not one of mine" and let the run proceed.
+---
+---`parameters` is the inputs `build` was called with, read into each declared
+---`type`: how a `setup` that starts the debuggee itself learns what to start.
+---
+---`make_buf_name(kind)` names a buffer the same way the run's own do, so a
+---buffer a `setup` spawns is reached by the run's number and name like the rest
+---(`:b ndap://<number>/<name>:<kind>`). Use it for `spawn`'s `bufname`. It will
+---not hand out a name twice: a reserved kind (`repl`, `output`, `term`, `dap`,
+---`log`, which the run names its own buffers by) or a `kind` already taken is an
+---error, so a definition that does either fails loudly instead of landing on the
+---run's buffer or a `~1` alias.
+---@class ndap.AdapterSetupCtx
+---@field add_bufnr     fun(bufnr: integer, opts?: ndap.AddBufOpts)
+---@field report        fun(message: string)
+---@field make_buf_name fun(kind: string): string
+---@field mode?         string
+---@field parameters?   table<string, any>  the mode's answered inputs, as `build` received them
+
+---What an input's value *is*. A collection holds entries read as scalars, which its
+---`item_type` names.
+---@alias ndap.InputType
+---| "string"   # the default
+---| "boolean"
+---| "integer"
+---| "number"
+---| "list"     # a table of entries (JSON `array`)
+---| "map"      # a table of `key=value` entries (JSON `object`)
+
+---What an input offers when its value is being typed, in any of three forms: a
+---named source, the values themselves, or a function computing them from what has
+---been typed so far. Completion only *suggests*; nothing here rejects a value
+---written past it, and what a path or a port additionally is, `build` says (see
+---`ndap.shared.normalize_path`, `ndap.shared.resolve_port`).
+---@alias ndap.Completion
+---| "file"     # a file path
+---| "dir"      # a directory
+---| string[]   # the values themselves
+---| fun(partial: string): string[]
+
+---A collection declares its *entries* with `item_type`, a scalar its own `type`.
+---`completion` describes one value either way: an entry, for a collection.
+---@class ndap.Input
+---@field required?    boolean  unset is an error (default false)
+---@field type?        ndap.InputType  default `string`
+---@field item_type?   ndap.InputType  a `list`/`map` entry's type, default `string`
+---@field completion?  ndap.Completion  what the value completes with
+---@field description? string   a few words on what the input means
+
+---@class ndap.Mode
+---@field description  string
+---@field request      "launch"|"attach"
+---@field inputs?      table<string, ndap.Input>  the mode's declared inputs
+---@field build?       fun(parameters: table<string, any>): table?, table|string?  the DAP request body, plus an optional host/port the run should connect to; or nil and a message to abort
+
+---@class ndap.AdapterDef
+---@field command?               string|string[]  executable and args; a string splits on whitespace, so arguments with whitespace need the list form
+---@field cwd?                   string
+---@field env?                   table<string,string>
+---@field host?                  string   ignored when `command` is set
+---@field port?                  integer  ignored when `command` is set
+---@field type?                  string   DAP adapterID override (defaults to the adapter name)
+---@field defer_launch_attach?   boolean
+---@field modes?                 table<string, ndap.Mode>
+---@field setup?                 fun(config: ndap.dap.Config, ctx: ndap.AdapterSetupCtx, callback: fun(err?: string, state?: any))
+---@field teardown?              fun(config: ndap.dap.Config, state: any)  runs after the session, and after a `setup` that failed, with the state `setup` handed back

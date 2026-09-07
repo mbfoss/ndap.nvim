@@ -1,0 +1,50 @@
+# Demo 5: The run's buffers, and the REPL evaluating in the stopped frame.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/05-repl.gif
+cast ../out/05-repl.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+key :e series.py<CR>
+sleep 600ms
+
+key :47<CR>
+sleep 400ms
+type :Ndap breakpoint
+key <CR>
+sleep 700ms
+
+type :Ndap start debugpy script --program series.py
+key <CR>
+wait \[paused\]
+sleep 1800ms
+
+caption Each run has its own REPL buffer
+key <C-w>j
+key <C-l>
+sleep 1200ms
+
+caption Evaluate in the stopped frame · i to type
+key i
+sleep 400ms
+type item.total
+key <CR>
+sleep 1600ms
+
+type series["cubes"].total
+key <CR>
+sleep 1600ms
+
+caption Function calls run in the debuggee
+type factorial(5)
+key <CR>
+sleep 2200ms

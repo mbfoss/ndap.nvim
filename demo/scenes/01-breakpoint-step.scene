@@ -1,0 +1,52 @@
+# Demo 1: The basic loop: set a breakpoint, launch under debugpy, stop, read
+# the debug view, step, continue.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/01-breakpoint-step.gif
+cast ../out/01-breakpoint-step.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+caption Breakpoints and stepping  ·  :Ndap breakpoint
+sleep 500ms
+key :e series.py<CR>
+sleep 600ms
+key :44<CR>
+sleep 400ms
+type :Ndap breakpoint
+key <CR>
+sleep 700ms
+
+caption Launch under debugpy
+type :Ndap start debugpy script --program series.py
+key <CR>
+wait \[paused\]
+sleep 1800ms
+
+caption Step over
+type :Ndap step_over
+key <CR>
+wait 45/66
+sleep 1200ms
+type :Ndap step_over
+key <CR>
+wait 46/66
+sleep 1500ms
+
+caption Continue to the next hit
+type :Ndap continue
+key <CR>
+wait 44/66
+sleep 2500ms
+
+type :Ndap stop
+key <CR>
+sleep 1200ms

@@ -1,0 +1,46 @@
+# Demo 3: A function breakpoint on `scale`, then the program's uncaught
+# ValueError, read with exception_info.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/03-function-exception.gif
+cast ../out/03-function-exception.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+key :e series.py<CR>
+sleep 600ms
+
+caption Function breakpoint  ·  break where scale is called
+type :Ndap breakpoint fn scale
+key <CR>
+sleep 900ms
+
+caption Launch and run into the error
+type :Ndap start debugpy script --program series.py --args -- --boom
+key <CR>
+wait \[paused\]
+sleep 2000ms
+
+caption Remove the breakpoint, let it run on
+type :Ndap breakpoint fn scale
+key <CR>
+sleep 900ms
+
+caption Continue  ·  the ValueError is uncaught
+type :Ndap continue
+key <CR>
+wait \(exception\)
+sleep 1800ms
+
+caption Read the exception
+type :Ndap exception_info
+key <CR>
+sleep 3000ms

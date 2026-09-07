@@ -1,0 +1,59 @@
+# Demo 7: Two debuggees paused at the same breakpoint; :Ndap session picks
+# which one the stepping commands apply to.
+size 120x34
+cwd $NDAP_DEMO_WORK
+init ../init.lua
+out ../out/07-parallel-sessions.gif
+cast ../out/07-parallel-sessions.cast
+
+font-family SauceCodePro NF
+font-dir /Users/Dev/Library/Fonts
+font-size 18
+line-height 1.19
+theme nord
+fps 20
+idle-time-limit 2
+last-frame-duration 2
+
+key :e series.py<CR>
+sleep 600ms
+
+key :44<CR>
+sleep 400ms
+type :Ndap breakpoint
+key <CR>
+sleep 700ms
+
+caption First debuggee
+type :Ndap start debugpy script --program series.py
+key <CR>
+wait \[paused\]
+sleep 1500ms
+
+caption A second debuggee at the same breakpoint
+type :Ndap start debugpy script --program series.py --args -- --boom
+key <CR>
+wait ndap://2/debugpy
+sleep 2200ms
+
+caption Select a session · <C-n>/<C-p> to move
+type :Ndap session
+key <CR>
+wait Select session
+sleep 1000ms
+key <C-n>
+sleep 600ms
+key <C-p>
+sleep 600ms
+key <CR>
+sleep 1800ms
+
+caption Step the selected session
+type :Ndap step_over
+key <CR>
+wait 45/66
+sleep 2000ms
+
+type :Ndap stop_all
+key <CR>
+sleep 1500ms
