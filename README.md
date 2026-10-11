@@ -17,18 +17,17 @@ speaks DAP.
 
 ![Breakpoints and stepping](https://raw.githubusercontent.com/mbfoss/ndap.nvim/assets/demos/01-breakpoint-step.gif)
 
-[More demos](DEMO.md): conditions and logpoints, exception breakpoints, the
-REPL, watch expressions, parallel sessions, persistence.
+[More demos...](DEMO.md)
 
 ## Features
 
 - **Breakpoints**: line, conditional, hit-count, logpoint, column, function,
-  exception (filters and named types) and data breakpoints / watchpoints, 
-  all synced live to running sessions and marked with distinct gutter glyphs.
+  exception (filters and named types) and data breakpoints / watchpoints, all
+  synced live to running sessions and marked with distinct gutter glyphs.
 - **Debug view**: one side window with sessions, threads, run buffers, call
-  stacks, scopes, variables, watch expressions and breakpoints in a single tree,
-  with fold controls and an in-view keymap for inspecting, editing and removing
-  entries.
+  stacks, scopes, variables, watch expressions and breakpoints in a single
+  tree, with fold controls and an in-view keymap for inspecting, editing and
+  removing entries.
 - **Inline variable values**: values shown in the source while stopped, in
   several placements (requires a treesitter parser).
 - **Run buffers**: each run gets its own REPL (with Tab completion), program
@@ -119,7 +118,7 @@ require("ndap").setup({}) -- required; pass options here
 
 `setup()` is the one call you have to make: it applies your options, registers
 the `:Ndap` command and installs the persistence autocmds. `setup({})` with no
-options is fine, and everything left out keeps its default. 
+options is fine, and everything left out keeps its default.
 
 ## Quick start
 
@@ -357,7 +356,7 @@ on the run's first buffer, follows along as higher-priority buffers appear or
 the shown one is deleted, and closes with the run's last buffer. `:Ndap panel`
 toggles it; `panel_auto_open` and `panel_height_ratio` adjust it.
 
-Each run keeps its own log, `ndap://<number>/<name>:log`, wiped with the run. 
+Each run keeps its own log, `ndap://<number>/<name>:log`, wiped with the run.
 Any of a run's buffers can be reached by name; see [Run buffers](#run-buffers).
 
 ### Inline variable values <!-- tag: inline-values -->

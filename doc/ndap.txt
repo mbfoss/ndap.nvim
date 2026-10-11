@@ -676,52 +676,25 @@ rest under `<leader>d`
     vim.keymap.set("n", "<F11>", "<Cmd>Ndap step_in<CR>",    { desc = "Debug: step in" })
     vim.keymap.set("n", "<F12>", "<Cmd>Ndap step_out<CR>",   { desc = "Debug: step out" })
     
-    vim.keymap.set("n", "<leader>bb", "<Cmd>Ndap breakpoint toggle<CR>",
-        { desc = "Debug: toggle breakpoint" })
-    vim.keymap.set("n", "<leader>bc", "<Cmd>Ndap breakpoint condition<CR>",
-        { desc = "Debug: conditional breakpoint" })
-    vim.keymap.set("n", "<leader>bL", "<Cmd>Ndap breakpoint logpoint<CR>",
-        { desc = "Debug: logpoint" })
-    vim.keymap.set("n", "<leader>bl", "<Cmd>Ndap breakpoint list<CR>",
-        { desc = "Debug: list breakpoints" })
-    vim.keymap.set("n", "<leader>dj", "<Cmd>Ndap step_over<CR>",
-        { desc = "Debug: step over" })
-    vim.keymap.set("n", "<leader>dl", "<Cmd>Ndap step_in<CR>",
-        { desc = "Debug: step in" })
-    vim.keymap.set("n", "<leader>dh", "<Cmd>Ndap step_out<CR>",
-        { desc = "Debug: step out" })
-    vim.keymap.set("n", "<leader>dk", "<Cmd>Ndap step_back<CR>",
-        { desc = "Debug: step back" })
-    vim.keymap.set("n", "<leader>dc", "<Cmd>Ndap continue<CR>",
-        { desc = "Debug: continue" })
-    vim.keymap.set("n", "<leader>dq", "<Cmd>Ndap stop<CR>",
-        { desc = "Debug: stop" })
-    vim.keymap.set("n", "<leader>dR", "<Cmd>Ndap rerun<CR>",
-        { desc = "Debug: re-run" })
-    vim.keymap.set("n", "<leader>dv", "<Cmd>Ndap view<CR>",
-        { desc = "Debug: focus view" })
-    vim.keymap.set("n", "<leader>dP", "<Cmd>Ndap panel<CR>",
-        { desc = "Debug: toggle panel" })
+    vim.keymap.set("n", "<leader>bb", "<Cmd>Ndap breakpoint toggle<CR>", { desc = "Debug: toggle breakpoint" })
+    vim.keymap.set("n", "<leader>bc", "<Cmd>Ndap breakpoint condition<CR>", { desc = "Debug: conditional breakpoint" })
+    vim.keymap.set("n", "<leader>bL", "<Cmd>Ndap breakpoint logpoint<CR>", { desc = "Debug: logpoint" })
+    vim.keymap.set("n", "<leader>bl", "<Cmd>Ndap breakpoint list<CR>", { desc = "Debug: list breakpoints" })
+    vim.keymap.set("n", "<leader>dc", "<Cmd>Ndap continue<CR>", { desc = "Debug: continue" })
+    vim.keymap.set("n", "<leader>dq", "<Cmd>Ndap stop<CR>", { desc = "Debug: stop" })
+    vim.keymap.set("n", "<leader>dR", "<Cmd>Ndap rerun<CR>", { desc = "Debug: re-run" })
+    vim.keymap.set("n", "<leader>dv", "<Cmd>Ndap view<CR>", { desc = "Debug: focus view" })
+    vim.keymap.set("n", "<leader>dP", "<Cmd>Ndap panel<CR>", { desc = "Debug: toggle panel" })
     
-    -- Inspect is the one map that wants the command *range*: in visual mode `:`
-    -- inserts `'<,'>`, which is what tells inspect to read the selection. `<Cmd>`
-    -- cannot supply it, so this one keeps the `:` form. Both modes get it; from
-    -- normal mode it inspects the word under the cursor.
-    vim.keymap.set({ "n", "x" }, "<leader>di", ":Ndap inspect<CR>",
-        { desc = "Debug: inspect value", silent = true })
+    vim.keymap.set({ "n", "x" }, "<leader>di", ":Ndap inspect<CR>", { desc = "Debug: inspect value" })
     
     -- Alt keys are a compact alternative to the function keys (the steps sit on the
-    -- home row) and can be added on top of them. Left commented out because
-    -- the terminal, the window manager or the OS swallows Alt on some setups, and a
-    -- map that never fires is worse than no map at all. If none of these respond,
-    -- `:verbose map <A-j>` says who took the key.
+    -- home row), (ensure Alt keys are supported in your terminal/client)
     -- vim.keymap.set("n", "<A-j>", "<Cmd>Ndap step_over<CR>", { desc = "Debug: step over" })
     -- vim.keymap.set("n", "<A-l>", "<Cmd>Ndap step_in<CR>",   { desc = "Debug: step in" })
     -- vim.keymap.set("n", "<A-h>", "<Cmd>Ndap step_out<CR>",  { desc = "Debug: step out" })
     -- vim.keymap.set("n", "<A-k>", "<Cmd>Ndap step_back<CR>", { desc = "Debug: step back" })
     -- vim.keymap.set("n", "<A-;>", "<Cmd>Ndap continue<CR>",  { desc = "Debug: continue" })
-    -- vim.keymap.set("n", "<A-b>", "<Cmd>Ndap breakpoint toggle<CR>",
-    --     { desc = "Debug: toggle breakpoint" })
 <
 
 
