@@ -607,10 +607,9 @@ and which adapters are available.
 
 ## Keymaps example<!-- tag: keymaps -->
 
-ndap ships no global keymaps; any layout works. The example below keeps the
-function keys for the controls reached while a session is running and
-puts the rest under `<leader>d`
+ndap ships no global keymaps; any layout works. 
 
+Example:
 ```lua
 local ndap = require("ndap")
 ndap.setup({})
