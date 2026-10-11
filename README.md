@@ -46,8 +46,6 @@ speaks DAP.
 
 ## Table of contents
 
-- [Features](#features)
-- [Demo](#demo)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
