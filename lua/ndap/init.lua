@@ -403,11 +403,11 @@ function M.remove_run(run)
     if view then view:clear_sessions(run.sessions) end
 end
 
----Re-run the most recently run task from scratch. Warns when nothing has run yet.
-function M.rerun()
-    _require_setup("rerun")
+---Run the most recently run task again from scratch. Warns when nothing has run yet.
+function M.run_again()
+    _require_setup("run_again")
     M.clean()
-    require("ndap.run.runner").rerun()
+    require("ndap.run.runner").run_again()
 end
 
 ---Drop every finished run, wiping its buffers, and the rows of the sessions

@@ -265,10 +265,10 @@ Everything above is available programmatically:
 ```lua
 local ndap = require("ndap")
 
--- The run_mode / run_file / new_run_file / rerun entry points
+-- The run_mode / run_file / new_run_file / run_again entry points
 ndap.run_mode("debugpy", "script", { command = "./main.py" })
 ndap.run_file("debug.lua")
-ndap.rerun()
+ndap.run_again()
 ```
 
 ## Breakpoints
@@ -533,7 +533,7 @@ require("ndap").create_cmd_alias("Debug")
 | `run_file [path]`     | Run a Lua run file, or pick from a directory     |
 | `new_run_file …`      | Generate a run file from a mode's inputs        |
 | `adapter_info [adapter] [mode]` | Report an adapter's modes, inputs and tooling |
-| `rerun`               | Re-launch the most recent run                     |
+| `run_again`           | Re-launch the most recent run                     |
 | *(none)* / `view`     | Open/focus the debug view                         |
 | `view toggle` / `view hide` | Close the debug view if open / close it       |
 | `panel`               | Toggle the panel                                  |
@@ -629,7 +629,7 @@ vim.keymap.set("n", "<leader>bL", "<Cmd>Ndap breakpoint logpoint<CR>", { desc = 
 vim.keymap.set("n", "<leader>bl", "<Cmd>Ndap breakpoint list<CR>", { desc = "Debug: list breakpoints" })
 vim.keymap.set("n", "<leader>dc", "<Cmd>Ndap continue<CR>", { desc = "Debug: continue" })
 vim.keymap.set("n", "<leader>dq", "<Cmd>Ndap stop<CR>", { desc = "Debug: stop" })
-vim.keymap.set("n", "<leader>dR", "<Cmd>Ndap rerun<CR>", { desc = "Debug: re-run" })
+vim.keymap.set("n", "<leader>dR", "<Cmd>Ndap run_again<CR>", { desc = "Debug: re-run" })
 vim.keymap.set("n", "<leader>dv", "<Cmd>Ndap view<CR>", { desc = "Debug: focus view" })
 vim.keymap.set("n", "<leader>dP", "<Cmd>Ndap panel<CR>", { desc = "Debug: toggle panel" })
 

@@ -136,7 +136,7 @@ local function _view_cmd(args)
 end
 
 local _debug_subs = {
-    "run", "run_file", "new_run_file", "rerun", "adapter_info",
+    "run", "run_again", "run_file", "new_run_file", "adapter_info",
     "breakpoint",
     "view", "panel", "continue", "continue_all",
     "step_over", "next", "step_in", "step_out", "step_back",
@@ -255,8 +255,8 @@ local function _debug_run(_, args, opts)
         ndap.new_run_file({ unpack(args, 2) })
     elseif sub == "adapter_info" then
         ndap.adapter_info(args[2], args[3])
-    elseif sub == "rerun" then
-        ndap.rerun()
+    elseif sub == "run_again" then
+        ndap.run_again()
     elseif sub == "view" then
         _view_cmd({ unpack(args, 2) })
     elseif sub == "panel" then

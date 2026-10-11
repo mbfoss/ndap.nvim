@@ -66,7 +66,7 @@ function M.set_presenter(factory) _presenter_for = factory end
 local _runs    = {}
 local _counter = 0
 
----The most recently run task, kept so `rerun()` can re-launch it from scratch.
+---The most recently run task, kept so `run_again()` can re-launch it from scratch.
 ---@type ndap.Task?
 local _last_task
 
@@ -183,7 +183,7 @@ end
 ---@param run ndap.runner.Run
 ---@param task ndap.Task
 local function _start(run, task)
-    -- `rerun` re-launches into ndap's own UI; a run a caller presents is that
+    -- `run_again` re-launches into ndap's own UI; a run a caller presents is that
     -- caller's to repeat.
     if run.owned then _last_task = task end
 
@@ -242,12 +242,12 @@ end
 ---restart support. Runs alongside the others: it replaces its own previous
 ---finished run, not theirs. Warns when no task has been run yet.
 ---@return ndap.runner.Run?
-function M.rerun()
+function M.run_again()
     if not _last_task then
-        _warn("rerun: nothing to re-run yet (run a task first)")
+        _warn("run_again: nothing to run again yet (run a task first)")
         return
     end
-    -- Copied because `_start` records it as the task to rerun next time, and the
+    -- Copied because `_start` records it as the task to run again next time, and the
     -- one held here must not be the one a run is mutating.
     local task = vim.deepcopy(_last_task)
     local run  = _new_run(task.name or "debug")

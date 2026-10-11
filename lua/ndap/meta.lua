@@ -31,7 +31,7 @@ error("do not require a meta file")
 ---@field adapter_info          fun(adapter?: string, mode?: string)
 ---@field run_mode              fun(adapter: string, mode: string, parameters?: table<string, any>, presenter?: ndap.runner.Presenter): ndap.runner.Run?
 ---@field remove_run            fun(run: ndap.runner.Run)
----@field rerun                 fun()
+---@field run_again             fun()
 ---@field clean                 fun()
 ---@field project_info          fun()
 ---@field is_setup              fun(): boolean

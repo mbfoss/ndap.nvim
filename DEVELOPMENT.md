@@ -43,7 +43,7 @@ emit, higher layers subscribe. `manager` is the single dependency surface for th
 UI and commands; prefer it over importing `dap/client` or `dap/breakpoints`.
 
 **Public API**: [lua/ndap/init.lua](lua/ndap/init.lua) `setup`; the run entry
-points (`run_mode`, `run_file`, `new_run_file`, `rerun`, `remove_run`); the view
+points (`run_mode`, `run_file`, `new_run_file`, `run_again`, `remove_run`); the view
 entry points (`open_debug_view`, `close_debug_view`, `toggle_debug_view`,
 `open_disassembly_view`); and the projections above. Registers the user command
 and hands each invocation to `usercmd`.
@@ -100,7 +100,7 @@ diagnostic. Never `require()` it, like `proto.lua`.
   and sends `request_args` as the DAP request body verbatim. `parameters`, the
   mode's answered inputs, reach a `setup` that needs them.
 - [runner.lua](lua/ndap/run/runner.lua): the run tracker behind `:Ndap
-  run`/`run_file`/`rerun`/`clean`, and the single path from a mode to a running
+  run`/`run_file`/`run_again`/`clean`, and the single path from a mode to a running
   session: it resolves the mode, tracks every run, and cancels it. Every run gets
   a `runner.Presenter` taking its buffers, progress and outcome; nothing here
   knows about windows.
