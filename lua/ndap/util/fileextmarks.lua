@@ -1,14 +1,21 @@
+--- Extmarks addressed by file path rather than by buffer: positions are
+--- stored, applied when the file is opened, tracked through edits, and
+--- written back on save, so marks survive a buffer being wiped and land on
+--- files that are never opened.
 local M = {}
 
+--- A mark as reported by the getters: the id it was set with, where it now
+--- sits, and where that position came from.
 ---@class ndap.util.fileextmarks.MarkInfo
----@field id number
----@field file string
+---@field id number        -- the id passed to set_file_extmark
+---@field file string        -- normalized path the mark lands on
 ---@field lnum number        -- 1-based
 ---@field col number        -- 0-based
----@field opts vim.api.keyset.set_extmark
----@field user_data any
----@field source "live"|"stored"
+---@field opts vim.api.keyset.set_extmark  -- the options the mark was set with
+---@field user_data any        -- the caller's payload
+---@field source "live"|"stored"  -- which position won: the open buffer or the cache
 
+---@private
 ---@class ndap.util.fileextmarks.MarkData
 ---@field id number
 ---@field ns number
@@ -20,6 +27,16 @@ local M = {}
 ---@alias ndap.util.fileextmarks.ById table<number, ndap.util.fileextmarks.MarkData>
 ---@alias ndap.util.fileextmarks.ByFile table<string, ndap.util.fileextmarks.ById>
 
+--- An argument to `set_file_extmark`: where the mark goes and what it carries.
+---@class ndap.util.fileextmarks.SetOpts
+---@field id number
+---@field file string
+---@field lnum integer        -- 1-based
+---@field col integer        -- 0-based
+---@field user_data any
+---@field opts vim.api.keyset.set_extmark?  -- extmark opts, e.g. end_row/end_col/priority/hl_group
+
+---@private
 ---@class ndap.util.fileextmarks.GroupData
 ---@field ns number
 ---@field byfile ndap.util.fileextmarks.ByFile
@@ -29,22 +46,10 @@ local M = {}
 local _defined_groups = {}
 local _autocmds_registered = false
 
--- Namespaces and autocmd groups live in one process-wide registry keyed by name,
--- while the state above is per module instance, so two copies of this file would
--- silently share them. The owning plugin claims a prefix via M.init().
----@type string?
-local _prefix = nil
-
----@return string
-local function _require_prefix()
-    return assert(_prefix, "init(prefix) must be called first")
-end
-
----@param name string
----@return string
-local function _prefixed(name)
-    return ("%s.%s"):format(_require_prefix(), name)
-end
+-- Namespaces and autocmd groups are each process-wide and keyed by name, while
+-- the state above is per module instance. `define_group` takes the namespace name
+-- verbatim and names the group's augroup with it too, asserting both are unused,
+-- so two vendored copies of this file cannot silently share either.
 
 --- Lands every spelling of a file -- relative, or through a symlinked component
 --- -- on one key. Buffer names go through it too: Neovim leaves a final-component
@@ -76,6 +81,7 @@ local function _normalized_buf_name(bufnr, name)
     return normalized
 end
 
+---@private
 ---@class ndap.util.fileextmarks.BufCacheEntry
 ---@field bufnr integer
 ---@field name string        -- the buffer's name when it was resolved
@@ -254,6 +260,7 @@ local function _set_extmark(bufnr, mark, store)
     if store then mark.lnum, mark.col = lnum, col end
 end
 
+---@private
 ---@class ndap.util.fileextmarks.LivePos
 ---@field id number
 ---@field lnum number        -- 1-based
@@ -327,10 +334,6 @@ end
 --- Fires for every change to an attached buffer, including API ones -- which is
 --- why this replaced a TextChanged autocmd: `nvim_buf_set_lines` fires no
 --- TextChanged, so a plugin editing the buffer stranded marks silently.
----`nvim_buf_attach` `on_lines` handler (see `:h nvim_buf_attach`); the ignored
----arguments are the event name, changedtick, and the old line range.
----@param bufnr    integer
----@param last_new integer  1-based index of the new last line
 local function _on_lines(_, bufnr, _, _, _, last_new)
     -- No entry means the last mark for this buffer's file is gone. Returning true
     -- is the whole detach path: an `on_lines` callback can only release itself, so
@@ -463,16 +466,15 @@ local function _sync_file_extmarks(bufnr)
     end
 end
 
-local function _register_autocmds()
+---@param namespace string      -- also names the augroup; the two registries are separate
+local function _register_autocmds(namespace)
     if _autocmds_registered then return end
     _autocmds_registered = true
 
-    local name = _prefixed("fileextmarks")
+    assert(not pcall(vim.api.nvim_get_autocmds, { group = namespace }),
+        ("augroup %q already exists"):format(namespace))
 
-    assert(not pcall(vim.api.nvim_get_autocmds, { group = name }),
-        ("augroup %q already exists -- another copy of this module owns prefix %q"):format(name, _require_prefix()))
-
-    local augroup = vim.api.nvim_create_augroup(name, { clear = true })
+    local augroup = vim.api.nvim_create_augroup(namespace, { clear = true })
     -- `BufNewFile` alongside `BufReadPost`: a path with no file behind it fires
     -- only the former, and marks on a file that is not there yet are a case this
     -- module supports -- see `_normalize_file`.
@@ -515,18 +517,15 @@ local function _register_autocmds()
     })
 end
 
----@param id number
----@param file string
----@param lnum number        -- 1-based
----@param col number        -- 0-based
+---@param spec ndap.util.fileextmarks.SetOpts
 ---@param group_data ndap.util.fileextmarks.GroupData
----@param opts vim.api.keyset.set_extmark       -- extmark opts (include `priority` here)
----@param user_data any
+---@return number id      -- the id the mark is stored under
 ---@see vim.api.nvim_buf_set_extmark
-local function _set_file_extmark(id, file, lnum, col, group_data, opts, user_data)
+local function _set_file_extmark(spec, group_data)
+    local id, lnum, col = spec.id, spec.lnum, spec.col
     assert(lnum >= 1, "lnum must be 1-based")
 
-    file = _normalize_file(file)
+    local file = _normalize_file(spec.file)
     local bufnr = _get_loaded_bufnr(file)
 
     local old_file = group_data.id_to_file[id]
@@ -557,8 +556,8 @@ local function _set_file_extmark(id, file, lnum, col, group_data, opts, user_dat
         col = col,
         -- `id` last: with "force" the right-hand table wins, and the id this
         -- mark is keyed by everywhere is not the caller's to override.
-        opts = vim.tbl_extend("force", opts or {}, { id = id }),
-        user_data = user_data,
+        opts = vim.tbl_extend("force", spec.opts or {}, { id = id }),
+        user_data = spec.user_data,
     }
 
     group_data.byfile[file][id] = mark
@@ -573,6 +572,8 @@ local function _set_file_extmark(id, file, lnum, col, group_data, opts, user_dat
         _set_extmark(bufnr, mark, _buf_matches_file(bufnr))
         _attach_buffer(bufnr, file)
     end
+
+    return id
 end
 
 ---@param id number
@@ -660,11 +661,11 @@ end
 ---@param file string
 ---@param line number
 ---@param group_data ndap.util.fileextmarks.GroupData
----@param live boolean
+---@param live boolean?      -- prefer the open buffer's position (default: stored)
 ---@return ndap.util.fileextmarks.MarkInfo?
 local function _get_extmark_by_location(file, line, group_data, live)
-    assert(type(live) == "boolean")
     assert(line >= 1, "line must be 1-based")
+    live = live == true
 
     file = _normalize_file(file)
 
@@ -724,10 +725,10 @@ local function _get_extmark_by_location(file, line, group_data, live)
 end
 
 ---@param group_data ndap.util.fileextmarks.GroupData
----@param live boolean
+---@param live boolean?      -- prefer the open buffer's position (default: stored)
 ---@return ndap.util.fileextmarks.MarkInfo[]
 local function _get_extmarks(group_data, live)
-    assert(type(live) == "boolean")
+    live = live == true
 
     local result = {}
 
@@ -766,10 +767,10 @@ end
 
 ---@param file string
 ---@param group_data ndap.util.fileextmarks.GroupData
----@param live boolean
+---@param live boolean?      -- prefer the open buffer's position (default: stored)
 ---@return ndap.util.fileextmarks.MarkInfo[]
 local function _get_file_extmarks(file, group_data, live)
-    assert(type(live) == "boolean")
+    live = live == true
 
     file = _normalize_file(file)
     local result = {}
@@ -809,68 +810,60 @@ local function _get_file_extmarks(file, group_data, live)
 end
 
 ---@param group_data ndap.util.fileextmarks.GroupData
----@param group string
-local function _refresh_group(group_data, group)
+---@param namespace string      -- key into `_defined_groups`
+local function _refresh_group(group_data, namespace)
     for file in pairs(group_data.byfile) do
         local bufnr = _get_loaded_bufnr(file)
         if bufnr >= 0 then
-            _apply_buffer_extmarks(bufnr, group) -- clears the namespace itself
+            _apply_buffer_extmarks(bufnr, namespace) -- clears the namespace itself
         end
     end
 end
 
+--- The surface one group is driven through. `lnum` is 1-based and `col`
+--- 0-based; `live` prefers the position in an open buffer over the stored one.
 ---@class ndap.util.fileextmarks.GroupFunctions
----@field set_file_extmark fun(id:number, file:string, lnum:number, col:number, opts:vim.api.keyset.set_extmark, user_data:any)
----@field remove_extmarks fun()
----@field remove_extmark fun(id:number)
----@field remove_file_extmarks fun(file:string)
+---@field set_file_extmark fun(spec:ndap.util.fileextmarks.SetOpts): number  sets or repositions the mark, returns its id
+---@field remove_extmarks fun()  removes every mark in the group
+---@field remove_extmark fun(id:number)  removes one mark
+---@field remove_file_extmarks fun(file:string)  removes the group's marks on one file
 ---@field get_extmark_by_id fun(id:number): ndap.util.fileextmarks.MarkInfo?
----@field get_extmark_by_location fun(file:string, line:number, live:boolean): ndap.util.fileextmarks.MarkInfo?
----@field get_extmarks fun(live:boolean): ndap.util.fileextmarks.MarkInfo[]
----@field get_file_extmarks fun(file:string, live:boolean): ndap.util.fileextmarks.MarkInfo[]
----@field refresh fun()
+---@field get_extmark_by_location fun(file:string, line:number, live:boolean?): ndap.util.fileextmarks.MarkInfo?
+---@field get_extmarks fun(live:boolean?): ndap.util.fileextmarks.MarkInfo[]  every mark in the group
+---@field get_file_extmarks fun(file:string, live:boolean?): ndap.util.fileextmarks.MarkInfo[]
+---@field refresh fun()  re-applies the group's marks to every open buffer
 
---- Claims the prefix used for every namespace and augroup this module creates.
---- Must be called (once) before M.define_group().
----@param prefix string  unique to the calling plugin, e.g. "myplugin"
-function M.init(prefix)
-    assert(type(prefix) == "string" and prefix ~= "", "prefix (non-empty string) required")
-    assert(not _prefix or _prefix == prefix, ("already initialized with prefix %q"):format(_prefix))
-
-    _prefix = prefix
-end
-
----@param group string  name, unique within this module instance; used to derive the extmark namespace
+--- Define a group and return its functions. `namespace` is used verbatim as the
+--- extmark namespace, so it must be unique across every copy of this module.
+---@param namespace string  e.g. "myplugin.marks"
 ---@return ndap.util.fileextmarks.GroupFunctions
-function M.define_group(group)
-    _require_prefix()
-    assert(type(group) == "string", "group (string) required")
-    assert(not _defined_groups[group], "group already defined")
+function M.define_group(namespace)
+    assert(type(namespace) == "string", "namespace (string) required")
+    assert(not _defined_groups[namespace], ("group %q already defined"):format(namespace))
 
-    local ns_name = _prefixed(group)
-    assert(not vim.api.nvim_get_namespaces()[ns_name],
-        ("namespace %q already exists -- another copy of this module owns prefix %q"):format(ns_name, _require_prefix()))
+    assert(not vim.api.nvim_get_namespaces()[namespace],
+        ("namespace %q already exists -- another copy of this module is using it"):format(namespace))
 
     ---@type ndap.util.fileextmarks.GroupData
     local group_data = {
-        ns = vim.api.nvim_create_namespace(ns_name),
+        ns = vim.api.nvim_create_namespace(namespace),
         byfile = {},
         id_to_file = {},
     }
-    _defined_groups[group] = group_data
+    _defined_groups[namespace] = group_data
 
-    _register_autocmds()
+    _register_autocmds(namespace)
 
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_loaded(bufnr) then
-            _apply_buffer_extmarks(bufnr, group)
+            _apply_buffer_extmarks(bufnr, namespace)
         end
     end
 
     ---@type ndap.util.fileextmarks.GroupFunctions
     return {
-        set_file_extmark = function(id, file, lnum, col, opts, user_data)
-            _set_file_extmark(id, file, lnum, col, group_data, opts, user_data)
+        set_file_extmark = function(spec)
+            return _set_file_extmark(spec, group_data)
         end,
         remove_extmark = function(id)
             _remove_extmark(id, group_data)
@@ -894,7 +887,7 @@ function M.define_group(group)
             return _get_file_extmarks(file, group_data, live)
         end,
         refresh = function()
-            _refresh_group(group_data, group)
+            _refresh_group(group_data, namespace)
         end,
     }
 end

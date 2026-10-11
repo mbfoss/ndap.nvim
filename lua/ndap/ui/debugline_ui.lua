@@ -43,12 +43,18 @@ local function _show_exception(sess, path, lnum)
     exception_info.oneline(sess, function(text)
         if not text or not _line_group then return end
         if manager.context_id() ~= context then return end
-        _line_group.set_file_extmark(_ex_id, path, lnum, 0, {
-            virt_text     = { { "  " .. config.symbols.exception_breakpoint .. " " .. text, _EX_HL } },
-            virt_text_pos = "eol",
-            hl_mode       = "combine",
-            priority      = 100,
-        }, nil)
+        _line_group.set_file_extmark({
+            id    = _ex_id,
+            file  = path,
+            lnum  = lnum,
+            col   = 0,
+            opts  = {
+                virt_text     = { { "  " .. config.symbols.exception_breakpoint .. " " .. text, _EX_HL } },
+                virt_text_pos = "eol",
+                hl_mode       = "combine",
+                priority      = 100,
+            },
+        })
     end)
 end
 
@@ -63,9 +69,20 @@ local function _show_stopped(sess)
     -- Above Neovim's default sign priority (DECOR_PRIORITY_BASE = 4096), which is
     -- what an extmark sign placed without an explicit priority gets (e.g. keystone
     -- bookmarks). The current frame must win the gutter cell against those.
-    _sign_group.set_file_extmark(_sign_id, src.path, lnum, 0,
-        { sign_text = config.symbols.debug_frame, sign_hl_group = _SIGN_HL, priority = 5000, hl_mode = "blend", }, nil)
-    _line_group.set_file_extmark(_sign_id, src.path, lnum, 0, { line_hl_group = _LINE_HL, priority = 40 }, nil)
+    _sign_group.set_file_extmark({
+        id   = _sign_id,
+        file = src.path,
+        lnum = lnum,
+        col  = 0,
+        opts = { sign_text = config.symbols.debug_frame, sign_hl_group = _SIGN_HL, priority = 5000, hl_mode = "blend" },
+    })
+    _line_group.set_file_extmark({
+        id   = _sign_id,
+        file = src.path,
+        lnum = lnum,
+        col  = 0,
+        opts = { line_hl_group = _LINE_HL, priority = 40 },
+    })
     if sess.state_reason == "function call" then
         return -- spurious stop triggered by gdp
     end
@@ -105,9 +122,8 @@ function M.init()
     if _init_done then return end
     _init_done = true
 
-    fileextmarks.init("ndap")
-    _sign_group = fileextmarks.define_group("framesign")
-    _line_group = fileextmarks.define_group("frameline")
+    _sign_group = fileextmarks.define_group("ndap.framesign")
+    _line_group = fileextmarks.define_group("ndap.frameline")
 
     -- Everything below listens to the session-independent signals and filters on
     -- the active id. Subscribing to the session object instead would mean a fresh

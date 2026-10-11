@@ -52,7 +52,14 @@ local function _refresh()
                 opts.sign_text     = glyph
                 opts.sign_hl_group = hl
             end
-            _group.set_file_extmark(bp.internal_id, bp.source, lnum, col, opts, { name = name })
+            _group.set_file_extmark({
+                id        = bp.internal_id,
+                file      = bp.source,
+                lnum      = lnum,
+                col       = col,
+                opts      = opts,
+                user_data = { name = name },
+            })
         end
     end
 end
@@ -80,8 +87,7 @@ end
 function M.init()
     if _init_done then return end
     _init_done = true
-    fileextmarks.init("ndap")
-    _group     = fileextmarks.define_group("breakpoints")
+    _group     = fileextmarks.define_group("ndap.breakpoints")
 
     breakpoints.on_change:subscribe(_refresh)
     -- Adapter-verified status is session-scoped; repaint signs when it changes.

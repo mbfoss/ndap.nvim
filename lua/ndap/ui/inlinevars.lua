@@ -6,9 +6,7 @@ local config         = require("ndap.config").current
 local fileextmarks   = require("ndap.util.fileextmarks")
 local color          = require("ndap.util.color")
 
-fileextmarks.init("ndap")
-
-local _group         = fileextmarks.define_group("inlinevars")
+local _group         = fileextmarks.define_group("ndap.inlinevars")
 local _PRIORITY      = 100
 local _seq           = 0
 local _max_size      = 30
@@ -102,12 +100,18 @@ local function _set_inline_extmark(file, row, col, text)
 	text = vim.trim(text)
 	if text == "" then return end
 	_mark_id = _mark_id + 1
-	_group.set_file_extmark(_mark_id, file, row + 1, col, {
-		virt_text = _pill(text),
-		virt_text_pos = "inline",
-		hl_mode = "combine",
-		priority = _PRIORITY,
-	}, nil)
+	_group.set_file_extmark({
+		id = _mark_id,
+		file = file,
+		lnum = row + 1,
+		col = col,
+		opts = {
+			virt_text = _pill(text),
+			virt_text_pos = "inline",
+			hl_mode = "combine",
+			priority = _PRIORITY,
+		},
+	})
 end
 
 ---Place one detached annotation for a whole line (the "eol"/"eol_right_align"/
@@ -131,12 +135,18 @@ local function _set_line_extmark(file, row, items, pos)
 	end
 	if #virt_text == 0 then return end
 	_mark_id = _mark_id + 1
-	_group.set_file_extmark(_mark_id, file, row + 1, 0, {
-		virt_text = virt_text,
-		virt_text_pos = pos,
-		hl_mode = "combine",
-		priority = _PRIORITY,
-	}, nil)
+	_group.set_file_extmark({
+		id = _mark_id,
+		file = file,
+		lnum = row + 1,
+		col = 0,
+		opts = {
+			virt_text = virt_text,
+			virt_text_pos = pos,
+			hl_mode = "combine",
+			priority = _PRIORITY,
+		},
+	})
 end
 
 ---Place the inline annotations for a frame using an already-parsed tree.
