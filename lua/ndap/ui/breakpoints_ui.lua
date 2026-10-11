@@ -42,8 +42,9 @@ local function _refresh()
             local col   = 0
             if bp.column then
                 -- Column breakpoint: inline glyph just before the column only, no
-                -- gutter sign.
-                col                = math.max(0, bp.column - 1)
+                -- gutter sign. Show it where the adapter bound it, if it moved.
+                local shown_col    = (st and st.column) or bp.column
+                col                = math.max(0, shown_col - 1)
                 opts.virt_text     = { { glyph, hl } }
                 opts.virt_text_pos = "inline"
             else

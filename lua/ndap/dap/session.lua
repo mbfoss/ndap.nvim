@@ -40,6 +40,7 @@ local str_util    = require("ndap.util.strutil")
 ---@field message  string?
 ---@field hits     integer
 ---@field line     integer?   adapter-resolved line, if it differs from the stored line (session-scoped)
+---@field column   integer?   adapter-resolved column for a column breakpoint, if it differs from the stored column (session-scoped)
 
 ---A data breakpoint (watchpoint) tracked by the session.
 ---Session-scoped: dataIds are obtained per-session via dataBreakpointInfo and
@@ -474,8 +475,11 @@ function Session:_sync_one_source(source, cb)
                         message  = upd.message,
                         hits     = prev and prev.hits or 0,
                         -- Track where the adapter actually bound the breakpoint, if
-                        -- it moved it off the requested line, so the sign can follow.
+                        -- it moved it off the requested line/column, so the marker
+                        -- can follow. Column is kept only for a column breakpoint.
                         line     = (upd.line and upd.line ~= bp.line) and upd.line or nil,
+                        column   = (bp.column and upd.column and upd.column ~= bp.column)
+                            and upd.column or nil,
                     }
                     self._bp_status[bp.internal_id] = st
                     if upd.id then self._adapter_id_map[upd.id] = bp.internal_id end
@@ -810,6 +814,8 @@ function Session:_on_breakpoint_event(body)
         -- Follow the adapter's bound line for source breakpoints (session-scoped).
         line     = (bp and bp.source and bp.source ~= "" and upd.line and upd.line ~= bp.line)
             and upd.line or nil,
+        column   = (bp and bp.column and upd.column and upd.column ~= bp.column)
+            and upd.column or nil,
     }
     self._bp_status[bp_id] = st
     if bp then

@@ -32,6 +32,25 @@ local _pending_follow = {}
 -- the wrong session's resolved line.
 manager.on_active_changed:subscribe(function() _pending_follow = {} end)
 
+-- Consume a follow on the adapter's first report: move the cursor to the bound
+-- line, but only while the user still sits where they added it.
+manager.on_breakpoint_updated:subscribe(function(_, bp, status)
+    local rec = _pending_follow[bp.internal_id]
+    if not rec then return end
+    _pending_follow[bp.internal_id] = nil
+
+    -- Same window, file and line as when it was added, or they have moved on.
+    if not vim.api.nvim_win_is_valid(rec.win) then return end
+    if vim.api.nvim_get_current_win() ~= rec.win then return end
+    if vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(rec.win)) ~= rec.file then return end
+    if vim.api.nvim_win_get_cursor(rec.win)[1] ~= rec.line then return end
+
+    local target = status and status.line
+    if not target or target == rec.line then return end
+    local col = vim.api.nvim_win_get_cursor(rec.win)[2]
+    vim.api.nvim_win_set_cursor(rec.win, { target, col })
+end)
+
 ---The two view singletons, created on first access. They live here rather than
 ---in `init` so the command surface never reaches back into the entry point;
 ---`init` keeps guarded delegates for the public API.
@@ -84,6 +103,30 @@ end
 
 M.breakpoint = {}
 
+---Where a source breakpoint is shown: the adapter-resolved position if the
+---session has bound it elsewhere, else the stored one.
+---@param bp ndap.dap.SourceBreakpoint
+---@return integer  line   1-based
+---@return integer? column 1-based (nil = whole-line breakpoint)
+local function _shown_pos(bp)
+    local st = manager.bp_status(bp.internal_id)
+    return (st and st.line) or bp.line, (st and st.column) or bp.column
+end
+
+---@param bp ndap.dap.SourceBreakpoint
+---@return integer
+local function _shown_line(bp)
+    local line = _shown_pos(bp)
+    return line
+end
+
+---@param bp ndap.dap.SourceBreakpoint
+---@return integer?
+local function _shown_column(bp)
+    local _, column = _shown_pos(bp)
+    return column
+end
+
 ---Find an existing source breakpoint in `file` whose displayed line (adapter-resolved
 ---if the session moved it, else stored) is `row`, returning its stored line: the
 ---registry key. A relocated breakpoint has no sign there, so toggling acts on what shows.
@@ -94,11 +137,7 @@ local function _existing_bp_line(file, row)
     local bps = manager.breakpoints
     for _, bp in ipairs(bps.for_source(file)) do
         -- Column breakpoints are managed by their own command, not the line toggle.
-        if bp.column == nil then
-            local st    = manager.bp_status(bp.internal_id)
-            local shown = (st and st.line) or bp.line
-            if shown == row then return bp.line end
-        end
+        if bp.column == nil and _shown_line(bp) == row then return bp.line end
     end
 end
 
@@ -111,8 +150,8 @@ local function _moved_bp_target(file, row)
     local bps = manager.breakpoints
     for _, bp in ipairs(bps.for_source(file)) do
         if bp.column == nil and bp.line == row then
-            local st = manager.bp_status(bp.internal_id)
-            if st and st.line and st.line ~= bp.line then return st.line end
+            local shown = _shown_line(bp)
+            if shown ~= bp.line then return shown end
         end
     end
 end
@@ -176,11 +215,9 @@ end
 local function _bps_at_row(file, row)
     local out = {}
     for _, bp in ipairs(manager.breakpoints.for_source(file)) do
-        local st    = manager.bp_status(bp.internal_id)
-        local shown = (st and st.line) or bp.line
-        if shown == row then out[#out + 1] = bp end
+        if _shown_line(bp) == row then out[#out + 1] = bp end
     end
-    table.sort(out, function(a, b) return (a.column or 0) < (b.column or 0) end)
+    table.sort(out, function(a, b) return (_shown_column(a) or 0) < (_shown_column(b) or 0) end)
     return out
 end
 
@@ -201,7 +238,8 @@ local function _resolve_target(file, row, opts, cb)
     if #cands == 1 then return cb(key(cands[1])) end
     local cursor_col = vim.api.nvim_win_get_cursor(0)[2] + 1
     for _, bp in ipairs(cands) do
-        if bp.column == cursor_col then return cb(key(bp)) end
+        -- The shown column, not the stored one: the adapter may have moved it.
+        if _shown_column(bp) == cursor_col then return cb(key(bp)) end
     end
     if not (opts and opts.ask) then
         for _, bp in ipairs(cands) do
@@ -211,7 +249,8 @@ local function _resolve_target(file, row, opts, cb)
     select.open({
         prompt = "Breakpoint on line " .. row,
         items  = vim.tbl_map(function(bp)
-            local label = tostring(bp.line) .. (bp.column and (":" .. bp.column) or "  (whole line)")
+            local line, column = _shown_pos(bp)
+            local label = tostring(line) .. (column and (":" .. column) or "  (whole line)")
             if bp.condition then label = label .. "  if: " .. bp.condition end
             if bp.log_message then label = label .. "  log: " .. bp.log_message end
             return { label = label, data = bp }
@@ -223,7 +262,7 @@ local function _resolve_target(file, row, opts, cb)
 end
 
 ---Toggle a column breakpoint at the cursor, at the start of the word under it.
----A breakpoint already at that column is removed; otherwise one is created. The
+---A breakpoint shown in that word is removed; otherwise one is created. The
 ---column counterpart of the plain line toggle.
 function M.breakpoint.column()
     local file, row = _cursor_location()
@@ -233,7 +272,10 @@ function M.breakpoint.column()
     local col      = _word_start(linetext, vim.api.nvim_win_get_cursor(0)[2] + 1)
     local bps      = manager.breakpoints
     for _, bp in ipairs(_bps_at_row(file, row)) do
-        if bp.column == col then
+        -- Match where it is shown, not where it was asked for: the adapter may
+        -- have bound it elsewhere, leaving the stored column unreachable.
+        local shown = _shown_column(bp)
+        if shown and _word_start(linetext, shown) == col then
             bps.remove(file, bp.line, bp.column)
             return
         end
