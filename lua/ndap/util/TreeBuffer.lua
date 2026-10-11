@@ -34,7 +34,7 @@ local Signal = require("ndap.util.Signal")
 ---@field indent_string string?                             one indent level (default: "  ")
 ---@field collapsible boolean?  -- whether nodes can be expanded/collapsed (default true)
 ---@field show_expand_symbols boolean?  -- render the expand/collapse symbol column (default true)
----@field indent_guides boolean?  -- draw vertical indent guides (default true)
+---@field indent_guides boolean?  -- draw vertical indent guides (default false)
 ---@field indent_guide_char string?                         (default: "│")
 ---@field indent_guide_hl string?  -- group the guides are drawn with (default "NonText")
 
@@ -42,7 +42,7 @@ local Signal = require("ndap.util.Signal")
 ---@class ndap.util.TreeBuffer.Indent
 ---@field text string
 ---@field width integer  -- display width
----@field guide_cols integer[]  -- byte offsets of guide chars
+---@field guide_cols integer[]?  -- byte offsets of guide chars, nil when guides are off
 
 --- A rendered `Tree`: it owns the tree, a scratch buffer and a namespace,
 --- keeps the buffer in step with every mutation, and re-renders only the
@@ -105,7 +105,7 @@ function TreeBuffer.new(opts)
         _collapse_symbol_hl = opts.collapse_symbol_hl,
         _indent_string      = indent_str,
         _indent_cache       = {},
-        _indent_guides      = opts.indent_guides ~= false,
+        _indent_guides      = opts.indent_guides == true,
         _indent_guide_char  = indent_guide_char,
         _indent_guide_hl    = opts.indent_guide_hl or "NonText",
         _indent_guide_pad   = indent_guide_pad,
@@ -140,6 +140,10 @@ end
 ---@return ndap.util.Tree.FlatNode[]
 local function _flatten(tree, starting_id)
     local out = {}
+    ---@param id any
+    ---@param data ndap.util.TreeBuffer.ItemData
+    ---@param depth integer
+    ---@return boolean?  whether to descend into this node
     local function visit(id, data, depth)
         out[#out + 1] = { id = id, data = data, depth = depth }
         return data.expanded
@@ -157,6 +161,8 @@ end
 ---@return integer
 local function _tree_size(tree, starting_id)
     local n = 0
+    ---@param data ndap.util.TreeBuffer.ItemData
+    ---@return boolean?  whether to descend into this node
     local function visit(_, data, _)
         n = n + 1
         return data.expanded
@@ -177,7 +183,7 @@ end
 
 --- Create the scratch buffer if there is none, with its keymaps, highlights
 --- and autocmds. `on_deleted` runs when the buffer is wiped.
----@param on_deleted function
+---@param on_deleted fun()
 ---@return integer bufnr, boolean created
 function TreeBuffer:create_buffer(on_deleted)
     if self._bufnr and self._bufnr ~= -1 then
@@ -283,7 +289,8 @@ function TreeBuffer:_get_indent(depth)
         text, guide_cols = string.rep(unit, depth), {}
         for i = 0, depth - 1 do guide_cols[#guide_cols + 1] = i * #unit end
     else
-        text, guide_cols = string.rep(self._indent_string, depth), {}
+        -- No guide columns to record, so skip even building the list.
+        text = string.rep(self._indent_string, depth)
     end
     indent = { text = text, width = vim.fn.strdisplaywidth(text), guide_cols = guide_cols }
     self._indent_cache[depth] = indent
@@ -318,9 +325,11 @@ function TreeBuffer:_render_node(flatnode, row)
     for _, c in ipairs(text_chunks) do chunks[#chunks + 1] = c end
 
     local line, col, hl_calls = indent.text, #indent.text, {}
-    local guide_len = #self._indent_guide_char
-    for _, s_col in ipairs(indent.guide_cols) do
-        hl_calls[#hl_calls + 1] = { hl = self._indent_guide_hl, row = row, s_col = s_col, e_col = s_col + guide_len }
+    if indent.guide_cols then
+        local guide_len = #self._indent_guide_char
+        for _, s_col in ipairs(indent.guide_cols) do
+            hl_calls[#hl_calls + 1] = { hl = self._indent_guide_hl, row = row, s_col = s_col, e_col = s_col + guide_len }
+        end
     end
     for _, chunk in ipairs(chunks) do
         local txt, hl = chunk[1], chunk[2]
@@ -517,6 +526,7 @@ function TreeBuffer:get_item_at_row(row)
 end
 
 --- Move the cursor to `id`'s line. False when `id` is not visible.
+---@param id any
 ---@return boolean
 function TreeBuffer:set_cursor_by_id(id)
     local winid = self:get_winid()
@@ -528,6 +538,7 @@ function TreeBuffer:set_cursor_by_id(id)
 end
 
 --- The item for `id`, or nil when it is not in the tree.
+---@param id any
 ---@return ndap.util.TreeBuffer.Item?
 function TreeBuffer:get_item(id)
     local data = self._tree:get_data(id)
@@ -536,12 +547,14 @@ function TreeBuffer:get_item(id)
 end
 
 --- The id of `id`'s parent, or nil when `id` is a root.
+---@param id any
 ---@return any?
 function TreeBuffer:get_parent_id(id)
     return self._tree:get_parent_id(id)
 end
 
 --- The children of `parent_id` as items, in order.
+---@param parent_id any
 ---@return ndap.util.TreeBuffer.Item[]
 function TreeBuffer:get_children(parent_id)
     local items = {}
@@ -552,6 +565,7 @@ function TreeBuffer:get_children(parent_id)
 end
 
 --- The child ids of `parent_id`, in order.
+---@param parent_id any
 ---@return any[]
 function TreeBuffer:get_children_ids(parent_id)
     return self._tree:get_children_ids(parent_id)
@@ -767,6 +781,7 @@ function TreeBuffer:redraw()
 end
 
 --- Expand `id` when it is collapsed, collapse it when expanded.
+---@param id any
 function TreeBuffer:toggle_expand(id)
     local data = self._tree:get_data(id)
     if not data then return end
@@ -774,6 +789,7 @@ function TreeBuffer:toggle_expand(id)
 end
 
 --- Expand `id`, rendering its children.
+---@param id any
 function TreeBuffer:expand(id)
     local data = self._tree:get_data(id)
     if not data or data.expanded or not (data.expandable or self._tree:have_children(id)) then return end
@@ -789,6 +805,7 @@ function TreeBuffer:expand(id)
 end
 
 --- Collapse `id`, hiding its descendants.
+---@param id any
 function TreeBuffer:collapse(id)
     local data = self._tree:get_data(id)
     if not data or not data.expanded then return end
@@ -802,6 +819,7 @@ function TreeBuffer:collapse(id)
 end
 
 --- Expand `id` and every expandable descendant.
+---@param id any
 function TreeBuffer:expand_all(id)
     local data = self._tree:get_data(id)
     if not data then return end
@@ -814,10 +832,12 @@ function TreeBuffer:expand_all(id)
 end
 
 --- Collapse `id` and every descendant.
+---@param id any
 function TreeBuffer:collapse_all(id)
     local data = self._tree:get_data(id)
     if not data then return end
     if data.expanded then self:collapse(id) end
+    ---@param node_id any
     local function reset(node_id)
         for _, child in ipairs(self._tree:get_children(node_id)) do
             local child_data = self._tree:get_data(child.id)
@@ -829,6 +849,7 @@ function TreeBuffer:collapse_all(id)
 end
 
 --- The data the caller supplied for `id`, or nil.
+---@param id any
 ---@return any?
 function TreeBuffer:get_item_data(id)
     local data = self._tree:get_data(id)
@@ -856,6 +877,7 @@ function TreeBuffer:get_roots()
 end
 
 --- The item for `id`'s parent, or nil when `id` is a root.
+---@param id any
 ---@return ndap.util.TreeBuffer.Item?
 function TreeBuffer:get_parent_item(id)
     local par_id = self._tree:get_parent_id(id)
