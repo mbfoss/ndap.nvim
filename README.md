@@ -13,8 +13,6 @@ speaks DAP.
 
 <!-- panvimdoc-ignore-start -->
 
-## Demo
-
 ![Breakpoints and stepping](https://raw.githubusercontent.com/mbfoss/ndap.nvim/assets/demos/01-breakpoint-step.gif)
 
 [More demos...](DEMO.md)
