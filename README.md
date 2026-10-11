@@ -602,8 +602,8 @@ persisted. The current project is reported by:
 :checkhealth ndap
 ```
 
-Reports the Neovim version, whether the plugin is initialised, the resolved
-project state, and which adapters are available.
+Reports the whether the plugin is initialised, the configuration status
+and which adapters are available.
 
 ## Keymaps example<!-- tag: keymaps -->
 
