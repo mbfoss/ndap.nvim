@@ -5,8 +5,6 @@ through [debugpy](https://github.com/microsoft/debugpy). Commands are typed in
 full (`:Ndap …`) to show what each step does; map them to keys for daily use,
 see [Keymaps example](README.md#keymaps-example).
 
-The editor is Neovim with ndap.
-
 <details>
 <summary><b>Breakpoints, stepping and the debug view</b></summary>
 
