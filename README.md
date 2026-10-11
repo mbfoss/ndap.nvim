@@ -182,12 +182,12 @@ Listing adapters does not load their definitions (`:Ndap adapter_info`,
 `:checkhealth ndap`); `:Ndap adapter_info <adapter>` does, and reports the
 modes it supports along with any error in the definition.
 
-## Starting a debug session <!-- tag: sessions -->
+## Starting a debug session<!-- tag: sessions -->
 
 There are two ways to start a debug session: from the command line, or from a
 run file.
 
-### From the command line <!-- tag: run-command -->
+### From the command line<!-- tag: run-command -->
 
 ```vim
 :Ndap run <adapter> <mode> [--input value ...]
@@ -236,7 +236,7 @@ Use `:Ndap run_file <file/dir>` to load and start a session from a run file.
 :Ndap run_file ./debug/   " picker over the folder's run files
 ```
 
-### `:Ndap new_run_file` <!-- tag: new-run-file -->
+### `:Ndap new_run_file`<!-- tag: new-run-file -->
 
 Generate a run file from one of an adapter's modes. Required inputs are written
 active; every other input is listed commented out with its description:
@@ -249,7 +249,7 @@ active; every other input is listed commented out with its description:
 Fill in the `parameters`, then `:Ndap run_file` it; it resolves through the
 same path as `:Ndap run`.
 
-### `:Ndap adapter_info` <!-- tag: adapter-info-command -->
+### `:Ndap adapter_info`<!-- tag: adapter-info-command -->
 
 Load an adapter's definition, check it, and show what it accepts in a markdown
 float rendered from the definition itself. A `status` section gives where the
@@ -258,7 +258,7 @@ when there is nothing to report. A `modes` section follows, with one subsection
 per mode: its request kind, its description, and a table of every input with its
 type and meaning. Required inputs sort first and are marked `[required]`.
 
-### From Lua <!-- tag: lua-api -->
+### From Lua<!-- tag: lua-api -->
 
 Everything above is available programmatically:
 
@@ -323,9 +323,9 @@ logpoint, disabled, exception). The full list of subcommands is in the
 [Command reference](#command-reference), and the glyphs are set with the
 `symbols` option in [Configuration](#configuration).
 
-## The debug UI <!-- tag: ui -->
+## The debug UI<!-- tag: ui -->
 
-### Debug view <!-- tag: debug-view -->
+### Debug view<!-- tag: debug-view -->
 
 The debug view is a tree of **sessions → threads → stack frames → scopes →
 variables**, plus **watch expressions** and **breakpoints**. It opens
@@ -347,7 +347,7 @@ Inside the view:
 | `g?`  | Show this keymap cheatsheet                                                  |
 | `zo` `zc` `za` `zO` `zC` | Fold controls (expand / collapse / toggle / all)          |
 
-### The panel <!-- tag: panel -->
+### The panel<!-- tag: panel -->
 
 A run spawns several buffers: Terminal, Output, REPL, its progress Log, DAP
 messages. They share one bottom split, the panel, which holds whichever of them
@@ -359,7 +359,7 @@ toggles it; `panel_auto_open` and `panel_height_ratio` adjust it.
 Each run keeps its own log, `ndap://<number>/<name>:log`, wiped with the run.
 Any of a run's buffers can be reached by name; see [Run buffers](#run-buffers).
 
-### Inline variable values <!-- tag: inline-values -->
+### Inline variable values<!-- tag: inline-values -->
 
 While stopped, ndap renders variable values inline in the source. Choose the
 placement with the `inline_vars` option (`inline`, `eol`, `eol_right_align`,
@@ -384,7 +384,7 @@ spawned, the request fails rather than falling back to an integrated terminal.
 :Ndap clean            " drop finished runs and wipe their buffers
 ```
 
-### Inspect, disassembly & REPL <!-- tag: inspect-repl -->
+### Inspect, disassembly & REPL<!-- tag: inspect-repl -->
 
 ```vim
 :Ndap inspect          " hover the word under the cursor (or, in visual
@@ -399,7 +399,7 @@ In the disassembly view, `<CR>` opens the corresponding source line and `K`
 shows the instruction reference. Breakpoints and stepping become
 instruction-level while it is focused.
 
-### Right-click menu <!-- tag: popup-menu -->
+### Right-click menu<!-- tag: popup-menu -->
 
 While a session is live, ndap adds a **Debug Inspect** entry to the right-click
 menu, which inspects the word clicked on (or the selection, in visual mode). It
@@ -409,7 +409,7 @@ is untouched when nothing is being debugged. Set `popup_menu = false` in
 
 The entry needs a GUI or a terminal with mouse support.
 
-## Stepping & execution control <!-- tag: stepping -->
+## Stepping & execution control<!-- tag: stepping -->
 
 ```vim
 :Ndap continue         " continue the active session
@@ -443,7 +443,7 @@ Switch the active target with pickers:
 :Ndap frame            " choose the active stack frame
 ```
 
-## Configuration <!-- tag: config -->
+## Configuration<!-- tag: config -->
 
 Pass options to `setup()`. Defaults when `setup({})` is called are:
 
@@ -512,7 +512,7 @@ require("ndap").setup({
 })
 ```
 
-## Command reference <!-- tag: commands -->
+## Command reference<!-- tag: commands -->
 
 Everything is under the `:Ndap` command, with completion for every subcommand.
 Bare `:Ndap`, with no subcommand, opens the debug view.
@@ -598,7 +598,7 @@ persisted. The current project is reported by:
 > Consider adding `.ndap.json` to the project's `.gitignore`, or commit it to
 > share breakpoints across a team.
 
-## Health check <!-- tag: health -->
+## Health check<!-- tag: health -->
 
 ```vim
 :checkhealth ndap
@@ -607,7 +607,7 @@ persisted. The current project is reported by:
 Reports the Neovim version, whether the plugin is initialised, the resolved
 project state, and which adapters are available.
 
-## Keymaps example <!-- tag: keymaps -->
+## Keymaps example<!-- tag: keymaps -->
 
 ndap ships no global keymaps; any layout works. The example below keeps the
 function keys for the controls reached while a session is running and
@@ -644,7 +644,7 @@ vim.keymap.set({ "n", "x" }, "<leader>di", ":Ndap inspect<CR>", { desc = "Debug:
 -- vim.keymap.set("n", "<A-;>", "<Cmd>Ndap continue<CR>",  { desc = "Debug: continue" })
 ```
 
-## Adding a custom adapter <!-- tag: custom-adapters -->
+## Adding a custom adapter<!-- tag: custom-adapters -->
 
 For a debugger already covered by
 [ndap-adapters](https://github.com/mbfoss/ndap-adapters.nvim), install that
@@ -698,7 +698,7 @@ too, and document themselves: `:Ndap adapter_info myadapter` renders the modes
 and inputs declared above, and, when the definition names a `command`, whether
 it is present on this machine.
 
-### Why inputs and not raw DAP <!-- tag: inputs -->
+### Why inputs and not raw DAP<!-- tag: inputs -->
 
 Modes declare `inputs` rather than taking a raw DAP body, which buys:
 
@@ -717,13 +717,13 @@ Modes declare `inputs` rather than taking a raw DAP body, which buys:
 - **Mode-supplied defaults.** A mode can act on a missing input instead of
   omitting the field.
 
-## License <!-- tag: license -->
+## License<!-- tag: license -->
 
 [MIT](LICENSE).
 
 <!-- panvimdoc-ignore-start -->
 
-## Contributing <!-- tag: contributing -->
+## Contributing<!-- tag: contributing -->
 
 Contributions are welcome.
 
