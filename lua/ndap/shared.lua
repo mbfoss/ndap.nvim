@@ -186,6 +186,7 @@ function M.select_process(prompt)
     -- Hands the answer back to the yielded caller. Everything that caller still has
     -- to do runs inside this resume, so a failure in it surfaces here or not at all:
     -- `coroutine.resume` returns false instead of raising, and no one is above us.
+    ---@param pid string?  chosen pid as `ps` printed it, or nil when the picker was dismissed
     local function answer(pid)
         local ok, err = coroutine.resume(co, pid)
         if not ok then

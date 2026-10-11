@@ -237,6 +237,9 @@ local function _parse_run_args(tokens)
     return adapter, mode, parameters
 end
 
+---Dispatch a `:Ndap …` invocation from its split arguments.
+---@param args string[]  arguments after the subcommand
+---@param opts table     nvim_create_user_command's opts
 local function _debug_run(_, args, opts)
     local sub = args[1]
     -- Bare `:Ndap` opens the debug view: the one thing that is useful at any
@@ -445,6 +448,8 @@ end
 ---@param cmd_line string
 ---@return string[]
 function M.complete(arg_lead, cmd_line)
+    ---@param strs string[]?  candidates to filter
+    ---@return string[]
     local function filter(strs)
         local out = {}
         for _, s in ipairs(strs or {}) do

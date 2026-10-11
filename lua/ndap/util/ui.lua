@@ -15,6 +15,10 @@ function M.win_setlocal(win, opt, val)
     vim.api.nvim_set_option_value(opt, val, { win = win, scope = "local" })
 end
 
+---Whether `winid` is a normal, editable window: valid, not a float/popup, and not
+---pinned with `winfixbuf`.
+---@param winid integer
+---@return boolean
 local function _is_regular_win(winid)
     if not vim.api.nvim_win_is_valid(winid) then return false end
     local cfg = vim.api.nvim_win_get_config(winid)
@@ -84,11 +88,13 @@ local function _get_regular_window()
 end
 
 
---- @param buffer integer Buffer to display, or 0 for current buffer
---- @param enter boolean Enter the window (make it the current window)
---- @param config vim.api.keyset.win_config Map defining the window configuration
---- @param on_close function
---- @return integer winid, integer augroup
+---Open `buffer` as a floating window and clean its augroup up on `WinClosed`.
+---@param buffer   integer                    buffer to display, or 0 for the current buffer
+---@param enter    boolean                    enter the window (make it the current window)
+---@param config   vim.api.keyset.win_config  window configuration
+---@param on_close fun()                      called once, when the window closes
+---@return integer winid
+---@return integer augroup
 function M.create_window(buffer, enter, config, on_close)
     local win = vim.api.nvim_open_win(buffer, enter, config)
     local augroup = vim.api.nvim_create_augroup("ndap_window_#" .. win, { clear = true })

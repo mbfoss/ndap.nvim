@@ -193,6 +193,7 @@ function M.parse(state, text)
     local span_start = 0
     local cur_hl = M.hl_for(state)
 
+    ---@param upto integer  end column of the run, exclusive
     local function flush(upto)
         if cur_hl and upto > span_start then
             spans[#spans + 1] = { s = span_start, e = upto, hl = cur_hl }

@@ -156,6 +156,7 @@ function Tree:_link_sibling(reference_id, id, before)
 	end
 end
 
+---@param id any
 function Tree:_unlink(id)
 	local node = self._nodes[id]
 	if not node then return end
@@ -405,6 +406,7 @@ function Tree:have_item(id)
 	return self._nodes[id] ~= nil
 end
 
+---@param id any
 ---@return boolean
 function Tree:is_root(id)
 	local node = self._nodes[id]
@@ -650,6 +652,9 @@ end
 
 function Tree:validate()
 	local visited = {}
+	---@param cond any
+	---@param fmt  string
+	---@param ...  any
 	local function assertf(cond, fmt, ...)
 		if not cond then
 			error("Tree:validate() - " .. string.format(fmt, ...))
@@ -687,6 +692,7 @@ function Tree:validate()
 			"_root_last mismatch: expected %s, got %s",
 			tostring(prev), tostring(self._root_last))
 	end
+	---@param id any
 	local function walk(id)
 		assertf(not visited[id],
 			"Cycle or multiple-parent detected at node %s",

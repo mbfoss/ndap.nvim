@@ -384,8 +384,11 @@ function M.breakpoint.logpoint()
     end)
 end
 
+---Toggle a function breakpoint for `name`; prompted when omitted or empty.
+---@param name? string  function name
 function M.breakpoint.fn(name)
     local bps = manager.breakpoints
+    ---@param n string  function name to add or remove
     local function _toggle(n)
         local found = false
         for _, bp in ipairs(bps.function_breakpoints()) do
@@ -427,6 +430,8 @@ end
 function M.breakpoint.exception_type(name, break_mode)
     local bps    = manager.breakpoints
     local _modes = { "always", "unhandled", "userUnhandled", "never" }
+    ---@param n    string   exception name to add or remove
+    ---@param mode string?  break mode; nil leaves the adapter's default
     local function _toggle(n, mode)
         local result = bps.toggle_exception_name(n, mode)
         vim.notify(
@@ -435,6 +440,7 @@ function M.breakpoint.exception_type(name, break_mode)
             or ("[dap] exception breakpoint removed: " .. n),
             vim.log.levels.INFO)
     end
+    ---@param n string  exception name to pick a break mode for
     local function _pick_mode(n)
         select.open({ prompt = "Break mode for " .. n .. ": ", items = _modes }, function(mode)
             if mode then _toggle(n, mode) end

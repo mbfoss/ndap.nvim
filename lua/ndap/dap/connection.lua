@@ -71,6 +71,8 @@ function Connection:_dispatch(msg)
         -- Adapter-initiated request (e.g. runInTerminal, startDebugging)
         local req_seq = tonumber(msg.seq)
         local command = msg.command or ""
+        ---@param result  table?   response body; sent only on success
+        ---@param err_msg string?  error message; non-nil marks the response failed
         local function respond(result, err_msg)
             if self._closed then return end
             ---@type ndap.dap.Message

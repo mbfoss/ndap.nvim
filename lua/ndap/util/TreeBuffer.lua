@@ -516,6 +516,7 @@ function TreeBuffer:get_item_at_row(row)
     return _to_item(id, data)
 end
 
+---@param id any
 ---@return boolean
 function TreeBuffer:set_cursor_by_id(id)
     local winid = self:get_winid()
@@ -526,6 +527,7 @@ function TreeBuffer:set_cursor_by_id(id)
     return ok
 end
 
+---@param id any
 ---@return ndap.util.TreeBuffer.Item?
 function TreeBuffer:get_item(id)
     local data = self._tree:get_data(id)
@@ -533,11 +535,13 @@ function TreeBuffer:get_item(id)
     return _to_item(id, data)
 end
 
+---@param id any
 ---@return any?
 function TreeBuffer:get_parent_id(id)
     return self._tree:get_parent_id(id)
 end
 
+---@param parent_id any
 ---@return ndap.util.TreeBuffer.Item[]
 function TreeBuffer:get_children(parent_id)
     local items = {}
@@ -547,6 +551,7 @@ function TreeBuffer:get_children(parent_id)
     return items
 end
 
+---@param parent_id any
 ---@return any[]
 function TreeBuffer:get_children_ids(parent_id)
     return self._tree:get_children_ids(parent_id)
@@ -747,12 +752,17 @@ function TreeBuffer:redraw()
     self:_full_render()
 end
 
+---Toggle `id`: collapse when expanded, expand otherwise.
+---@param id any
 function TreeBuffer:toggle_expand(id)
     local data = self._tree:get_data(id)
     if not data then return end
     if data.expanded then self:collapse(id) else self:expand(id) end
 end
 
+---Expand `id`, re-rendering the lines it reveals. No-op when already expanded
+---or not expandable.
+---@param id any
 function TreeBuffer:expand(id)
     local data = self._tree:get_data(id)
     if not data or data.expanded or not (data.expandable or self._tree:have_children(id)) then return end
@@ -767,6 +777,8 @@ function TreeBuffer:expand(id)
     self._on_toggle:emit(id, data.userdata, true)
 end
 
+---Collapse `id`, re-rendering the lines it hides. No-op when not expanded.
+---@param id any
 function TreeBuffer:collapse(id)
     local data = self._tree:get_data(id)
     if not data or not data.expanded then return end
@@ -779,6 +791,8 @@ function TreeBuffer:collapse(id)
     self._on_toggle:emit(id, data.userdata, false)
 end
 
+---Expand `id` and every descendant.
+---@param id any
 function TreeBuffer:expand_all(id)
     local data = self._tree:get_data(id)
     if not data then return end
@@ -790,10 +804,13 @@ function TreeBuffer:expand_all(id)
     end
 end
 
+---Collapse `id` and every descendant.
+---@param id any
 function TreeBuffer:collapse_all(id)
     local data = self._tree:get_data(id)
     if not data then return end
     if data.expanded then self:collapse(id) end
+    ---@param node_id any
     local function reset(node_id)
         for _, child in ipairs(self._tree:get_children(node_id)) do
             local child_data = self._tree:get_data(child.id)
@@ -804,6 +821,7 @@ function TreeBuffer:collapse_all(id)
     reset(id)
 end
 
+---@param id any
 ---@return any?
 function TreeBuffer:get_item_data(id)
     local data = self._tree:get_data(id)
@@ -828,6 +846,7 @@ function TreeBuffer:get_roots()
     return items
 end
 
+---@param id any
 ---@return ndap.util.TreeBuffer.Item?
 function TreeBuffer:get_parent_item(id)
     local par_id = self._tree:get_parent_id(id)

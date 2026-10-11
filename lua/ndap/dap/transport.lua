@@ -28,6 +28,7 @@ function M.new_parser()
         on_message = function(_) end,
     }
 
+    ---@param chunk string  raw bytes received from the adapter
     function self:feed(chunk)
         self.buf = self.buf .. chunk
         while true do

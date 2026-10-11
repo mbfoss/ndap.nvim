@@ -107,6 +107,8 @@ end
 ---Overwrite `dst` from `src` key by key: a key `src` lacks is dropped, and a
 ---table on both sides recurses instead of being swapped in. Nothing reachable
 ---from `current` is ever replaced, and nothing stale is left behind.
+---@param dst table  target, mutated in place
+---@param src table  source of the new values
 local function _refill(dst, src)
     for k in pairs(dst) do
         if src[k] == nil then dst[k] = nil end

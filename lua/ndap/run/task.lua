@@ -135,6 +135,7 @@ M.start            = function(task, callbacks, run)
     -- Output buffer: created on first non-console output event.
     local out_buf = nil ---@type ndap.OutputBuffer?
 
+    ---@param text string  output to append; may be multi-line
     local function append_output(text)
         local lines = vim.split(text, "\n", { plain = true })
         if lines[#lines] == "" then table.remove(lines) end
@@ -167,6 +168,7 @@ M.start            = function(task, callbacks, run)
     -- Bound before `setup`: a failed one hands its state back with the error.
     local _teardown = base.teardown
 
+    ---@param cb fun(state: any?, err: boolean?)  err is true only when setup failed
     local function _run_setup(cb)
         if not base.setup then return cb(nil) end
         _setup_ctx.report("setup: starting")

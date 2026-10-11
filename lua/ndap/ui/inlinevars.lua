@@ -67,6 +67,7 @@ local function _clear()
 	_group.remove_extmarks()
 end
 
+---@param delay_ms integer  milliseconds to wait before clearing the marks
 local function _deferred_clear(delay_ms)
 	_cancel_clear_timer()
 	local t = vim.uv.new_timer()
@@ -171,6 +172,7 @@ local function _place_from_tree(root, ctx)
 	---@type table<string, {sr:number, ec:number}[]>
 	local occurrences = {}
 
+	---@param node TSNode
 	local function walk(node)
 		if not node then return end
 		if _child_scopes[node:id()] then return end
@@ -243,6 +245,9 @@ local function _place_from_tree(root, ctx)
 	end
 end
 
+---Render the inline value pills for `variables` into `frame`'s source buffer.
+---@param frame     ndap.dap.StackFrame
+---@param variables ndap.dap.Variable[]?
 local function _render_variables(frame, variables)
 	if not frame or not frame.source or not frame.source.path then return end
 
@@ -281,6 +286,7 @@ local function _render_variables(frame, variables)
 
 	local seq = _seq
 	local placed = false
+	---@param trees TSTree[]?  parse result; nil on a synchronous parse
 	local function place(trees)
 		if placed or seq ~= _seq then return end
 		if not vim.api.nvim_buf_is_valid(bufnr) then return end
@@ -352,6 +358,8 @@ end
 ---latter is not implied by the former: a resume schedules a clear rather than an
 ---update, so nothing would bump `_seq`, and the reply would land, cancel that
 ---pending clear and paint values from the finished pause over running code.
+---@param session ndap.dap.Session
+---@param frame   ndap.dap.StackFrame?
 local function _update(session, frame)
 	if not _active() then return end
 	if not frame or not frame.source or not frame.source.path then return end
@@ -372,6 +380,7 @@ function M.clear()
 	_clear()
 end
 
+---@param v boolean?  false disables; omitted/nil enables
 function M.enable(v)
 	_enabled = v ~= false
 	if not _enabled then
@@ -381,6 +390,8 @@ function M.enable(v)
 	-- active id, so disabling really does detach: handlers registered on a session
 	-- object cannot be taken off it again, and would keep firing after the unsub.
 	if _enabled and #_unsubs == 0 then
+		---@param signal  ndap.util.Signal
+		---@param handler any
 		local function sub(signal, handler)
 			_unsubs[#_unsubs + 1] = signal:subscribe(handler)
 		end

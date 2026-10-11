@@ -17,6 +17,10 @@ local _PROMPT_W = 2   -- visual width of "» "
 
 -- Grid formatter
 
+---Lay `items` out in columns that fit `width`, joined by CRLF for the terminal.
+---@param items string[]
+---@param width integer?   default 80
+---@return string
 local function _format_grid(items, width)
     width = width or 80
     local max_len = 0
@@ -86,6 +90,7 @@ end
 
 -- Initialisation
 
+---@param name string  buffer name
 function ReplBuffer:_init(name)
     self._bufnr = ui.create_scratch_buffer(true, {
         bufhidden = "hide",
@@ -164,6 +169,7 @@ end
 
 -- Evaluation
 
+---@param expr string  the expression to evaluate and print
 function ReplBuffer:_submit(expr)
     self._evaluate(expr, function(result, err)
         vim.schedule(function()
@@ -253,6 +259,7 @@ end
 
 -- Input state machine
 
+---@param data string  key sequence received from the terminal channel
 function ReplBuffer:_handle(data)
     -- Tab: completion (handled before cycle reset)
     if data == "\t" then

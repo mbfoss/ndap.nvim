@@ -327,6 +327,10 @@ end
 --- Fires for every change to an attached buffer, including API ones -- which is
 --- why this replaced a TextChanged autocmd: `nvim_buf_set_lines` fires no
 --- TextChanged, so a plugin editing the buffer stranded marks silently.
+---`nvim_buf_attach` `on_lines` handler (see `:h nvim_buf_attach`); the ignored
+---arguments are the event name, changedtick, and the old line range.
+---@param bufnr    integer
+---@param last_new integer  1-based index of the new last line
 local function _on_lines(_, bufnr, _, _, _, last_new)
     -- No entry means the last mark for this buffer's file is gone. Returning true
     -- is the whole detach path: an `on_lines` callback can only release itself, so

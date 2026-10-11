@@ -9,6 +9,9 @@ function M.stop_and_close_timer(timer)
     return nil
 end
 
+---Build the `stop` function returned by `defer` / `every` (see `M.defer`).
+---@param timer_ref table  single-slot holder for the timer handle
+---@return function
 local function _make_stop(timer_ref)
     return function()
         M.stop_and_close_timer(timer_ref[1])

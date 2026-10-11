@@ -16,6 +16,9 @@ function M.ordered(t, keys)
     end
 end
 
+---The `keys_order` list a table carries from `ordered`, or nil when it has none.
+---@param t table
+---@return string[]? keys
 function M.ordered_keys_of(t)
     if type(t) ~= "table" then return nil end
     local mt = getmetatable(t)

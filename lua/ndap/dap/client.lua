@@ -27,6 +27,10 @@ local str_util    = require("ndap.util.strutil")
 
 -- Config evaluation
 
+---Resolve a config value: a function is called for its result, anything else
+---passes through; a raising function falls back to the function itself.
+---@param v any
+---@return any
 local function _eval_val(v)
     if type(v) == "function" then
         local ok, val = pcall(v)
