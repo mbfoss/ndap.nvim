@@ -13,6 +13,13 @@ speaks DAP.
 
 <!-- panvimdoc-ignore-start -->
 
+## Demo
+
+![Breakpoints and stepping](https://raw.githubusercontent.com/mbfoss/ndap.nvim/assets/demos/01-breakpoint-step.gif)
+
+[More demos](DEMO.md): conditions and logpoints, exception breakpoints, the
+REPL, watch expressions, parallel sessions, persistence.
+
 ## Features
 
 - **Breakpoints**: line, conditional, hit-count, logpoint, column, function,
@@ -35,13 +42,6 @@ speaks DAP.
   buffers, with pickers to switch sessions, threads and frames.
 - **Project-scoped persistence**: breakpoints and watch expressions saved per
   project and restored automatically.
-
-## Demo
-
-![Breakpoints and stepping](https://raw.githubusercontent.com/mbfoss/ndap.nvim/assets/demos/01-breakpoint-step.gif)
-
-[More demos](DEMO.md): conditions and logpoints, exception breakpoints, the
-REPL, watch expressions, parallel sessions, persistence.
 
 ---
 
@@ -611,23 +611,12 @@ project state, and which adapters are available.
 ## Keymaps example <!-- tag: keymaps -->
 
 ndap ships no global keymaps; any layout works. The example below keeps the
-function keys for the controls reached while a session is running (they match
-what other debuggers use, and they work where Alt does not reach Neovim), and
-puts the rest under `<leader>d`, driven from one table:
+function keys for the controls reached while a session is running and
+puts the rest under `<leader>d`
 
 ```lua
 local ndap = require("ndap")
 ndap.setup({})
-
----Bind `lhs` to `:Ndap <sub>`, with a `desc` for which-key.
----@param lhs    string
----@param sub    string  the subcommand, arguments included
----@param desc   string
----@param modes? string|string[]
-local function dmap(lhs, sub, desc, modes)
-    vim.keymap.set(modes or "n", lhs, ("<Cmd>Ndap %s<CR>"):format(sub),
-        { desc = "Debug: " .. desc, silent = true })
-end
 
 vim.keymap.set("n", "<F5>",  "<Cmd>Ndap continue<CR>",   { desc = "Debug: continue" })
 vim.keymap.set("n", "<F9>",  "<Cmd>Ndap breakpoint<CR>", { desc = "Debug: toggle breakpoint" })
@@ -635,43 +624,25 @@ vim.keymap.set("n", "<F10>", "<Cmd>Ndap step_over<CR>",  { desc = "Debug: step o
 vim.keymap.set("n", "<F11>", "<Cmd>Ndap step_in<CR>",    { desc = "Debug: step in" })
 vim.keymap.set("n", "<F12>", "<Cmd>Ndap step_out<CR>",   { desc = "Debug: step out" })
 
-for _, m in ipairs({
-    { "<leader>bb", "breakpoint toggle",    "toggle breakpoint" },
-    { "<leader>bc", "breakpoint condition", "conditional breakpoint" },
-    { "<leader>bL", "breakpoint logpoint",  "logpoint" },
-    { "<leader>bl", "breakpoint list",      "list breakpoints" },
-    { "<leader>dj", "step_over",            "step over" },
-    { "<leader>dl", "step_in",              "step in" },
-    { "<leader>dh", "step_out",             "step out" },
-    { "<leader>dk", "step_back",            "step back" },
-    { "<leader>dc", "continue",             "continue" },
-    { "<leader>dq", "stop",                 "stop" },
-    { "<leader>dR", "rerun",                "re-run" },
-    { "<leader>dv", "view",                 "focus view" },
-    { "<leader>dP", "panel",                "toggle panel" },
-}) do
-    dmap(m[1], m[2], m[3])
-end
+vim.keymap.set("n", "<leader>bb", "<Cmd>Ndap breakpoint toggle<CR>", { desc = "Debug: toggle breakpoint" })
+vim.keymap.set("n", "<leader>bc", "<Cmd>Ndap breakpoint condition<CR>", { desc = "Debug: conditional breakpoint" })
+vim.keymap.set("n", "<leader>bL", "<Cmd>Ndap breakpoint logpoint<CR>", { desc = "Debug: logpoint" })
+vim.keymap.set("n", "<leader>bl", "<Cmd>Ndap breakpoint list<CR>", { desc = "Debug: list breakpoints" })
+vim.keymap.set("n", "<leader>dc", "<Cmd>Ndap continue<CR>", { desc = "Debug: continue" })
+vim.keymap.set("n", "<leader>dq", "<Cmd>Ndap stop<CR>", { desc = "Debug: stop" })
+vim.keymap.set("n", "<leader>dR", "<Cmd>Ndap rerun<CR>", { desc = "Debug: re-run" })
+vim.keymap.set("n", "<leader>dv", "<Cmd>Ndap view<CR>", { desc = "Debug: focus view" })
+vim.keymap.set("n", "<leader>dP", "<Cmd>Ndap panel<CR>", { desc = "Debug: toggle panel" })
 
--- Inspect is the one map that wants the command *range*: in visual mode `:`
--- inserts `'<,'>`, which is what tells inspect to read the selection. `<Cmd>`
--- cannot supply it, so this one keeps the `:` form. Both modes get it; from
--- normal mode it inspects the word under the cursor.
-vim.keymap.set({ "n", "x" }, "<leader>di", ":Ndap inspect<CR>",
-    { desc = "Debug: inspect value", silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>di", ":Ndap inspect<CR>", { desc = "Debug: inspect value" })
 
 -- Alt keys are a compact alternative to the function keys (the steps sit on the
--- home row) and can be added on top of them. Left commented out because
--- the terminal, the window manager or the OS swallows Alt on some setups, and a
--- map that never fires is worse than no map at all. If none of these respond,
--- `:verbose map <A-j>` says who took the key.
--- for _, a in ipairs({
---     { "<A-j>", "step_over" }, { "<A-l>", "step_in" },
---     { "<A-h>", "step_out" },  { "<A-k>", "step_back" },
---     { "<A-;>", "continue" },  { "<A-b>", "breakpoint toggle" },
--- }) do
---     dmap(a[1], a[2], a[2])
--- end
+-- home row), (ensure Alt keys are supported in your terminal/client)
+-- vim.keymap.set("n", "<A-j>", "<Cmd>Ndap step_over<CR>", { desc = "Debug: step over" })
+-- vim.keymap.set("n", "<A-l>", "<Cmd>Ndap step_in<CR>",   { desc = "Debug: step in" })
+-- vim.keymap.set("n", "<A-h>", "<Cmd>Ndap step_out<CR>",  { desc = "Debug: step out" })
+-- vim.keymap.set("n", "<A-k>", "<Cmd>Ndap step_back<CR>", { desc = "Debug: step back" })
+-- vim.keymap.set("n", "<A-;>", "<Cmd>Ndap continue<CR>",  { desc = "Debug: continue" })
 ```
 
 ## Adding a custom adapter <!-- tag: custom-adapters -->
