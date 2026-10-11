@@ -18,6 +18,35 @@ function M.mix(fg, bg, pct)
     return out
 end
 
+---Convert a colour to a 24-bit integer: an integer passes through, and a `#rrggbb`
+---string is parsed. Anything else raises.
+---@param color integer|string
+---@return integer
+function M.normalize_color(color)
+    if type(color) == "number" then return color end
+    if type(color) == "string" then
+        local n = tonumber((color:gsub("^#", "")), 16)
+        if n then return n end
+    end
+    error("invalid color: " .. tostring(color))
+end
+
+---Linearly blend two 24-bit colours, `alpha` 0 giving `c1` and 1 giving `c2`.
+---Either colour may be an integer or a `#rrggbb` string.
+---@param c1 integer|string  -- base colour
+---@param c2 integer|string  -- colour blended toward
+---@param alpha number  -- 0 = all `c1`, 1 = all `c2`
+---@return integer
+function M.blend_colors(c1, c2, alpha)
+    c1, c2 = M.normalize_color(c1), M.normalize_color(c2)
+    local out = 0
+    for _, scale in ipairs({ 65536, 256, 1 }) do
+        local a, b = math.floor(c1 / scale) % 256, math.floor(c2 / scale) % 256
+        out = out + math.floor(a * (1 - alpha) + b * alpha) * scale
+    end
+    return out
+end
+
 ---The colour faded into: the background of `bg`, or black/white when it has none.
 ---@param bg string
 ---@return integer
