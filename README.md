@@ -19,6 +19,32 @@ speaks DAP.
 
 [More demos...](DEMO.md)
 
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Demo](#demo)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Adapters](#adapters)
+- [Starting a debug session](#starting-a-debug-session)
+- [Breakpoints](#breakpoints)
+- [The debug UI](#the-debug-ui)
+- [Stepping & execution control](#stepping--execution-control)
+- [Configuration](#configuration)
+- [Command reference](#command-reference)
+- [Persistence](#persistence)
+- [Health check](#health-check)
+- [Keymaps example](#keymaps-example)
+- [Adding a custom adapter](#adding-a-custom-adapter)
+- [Writing an adapter definition](WRITING-DEFINITIONS.md)
+- [License](#license)
+- [Contributing](#contributing)
+
+---
+
 ## Features
 
 - **Breakpoints**: line, conditional, hit-count, logpoint, column, function,
@@ -41,30 +67,6 @@ speaks DAP.
   buffers, with pickers to switch sessions, threads and frames.
 - **Project-scoped persistence**: breakpoints and watch expressions saved per
   project and restored automatically.
-
----
-
-## Table of contents
-
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Adapters](#adapters)
-- [Starting a debug session](#starting-a-debug-session)
-- [Breakpoints](#breakpoints)
-- [The debug UI](#the-debug-ui)
-- [Stepping & execution control](#stepping--execution-control)
-- [Configuration](#configuration)
-- [Command reference](#command-reference)
-- [Persistence](#persistence)
-- [Health check](#health-check)
-- [Keymaps example](#keymaps-example)
-- [Adding a custom adapter](#adding-a-custom-adapter)
-- [Writing an adapter definition](WRITING-DEFINITIONS.md)
-- [License](#license)
-- [Contributing](#contributing)
-
----
 
 <!-- panvimdoc-ignore-end -->
 
