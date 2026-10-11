@@ -1,22 +1,5 @@
 local M = {}
 
----@param str string
----@param len number  display cells
----@return string
-function M.pad_right(str, len)
-	return str .. string.rep(" ", math.max(0, len - vim.api.nvim_strwidth(str)))
-end
-
----@param lines string[] list of strings (may contain newlines)
----@return string[] flattened list of strings (no embedded newlines)
-function M.prepare_buffer_lines(lines)
-	local out = {}
-	for _, line in ipairs(lines) do
-		vim.list_extend(out, vim.fn.split(line, "\n", true))
-	end
-	return out
-end
-
 local _ELLIPSIS = "…"
 
 ---The `width` display cells of `str` that survive cutting, keeping the start of
@@ -78,64 +61,6 @@ function M.crop_for_ui(str, max_len, right)
 		return _ELLIPSIS .. kept, true
 	end
 	return kept .. _ELLIPSIS, true
-end
-
----@param path string
----@param patterns string[]
----@return boolean
-function M.matches_any(path, patterns)
-	for _, pattern in ipairs(patterns) do
-		local regex = vim.fn.glob2regpat(pattern)
-		if vim.fn.match(path, regex) ~= -1 then
-			return true
-		end
-	end
-	return false
-end
-
----@param str string
----@return string
-function M.human_case(str)
-	str = str:gsub("_", " ")
-	str = str:gsub("(%l)(%u)", "%1 %2")
-	str = str:gsub("(%a)([%w']*)", function(first, rest)
-		return first:upper() .. rest:lower()
-	end)
-
-	return str
-end
-
-local function _escape_shell_arg(arg)
-	arg = arg or ""
-	if arg:match('[%s;&|$`"\'<>]') then
-		arg = "'" .. (arg:gsub("'", "'\\''")) .. "'"
-	end
-	return arg
-end
-
----@param cmd_and_args string[]
----@return string
-function M.get_shell_command(cmd_and_args)
-	local parts = {}
-	for i, str in ipairs(cmd_and_args) do
-		table.insert(parts, _escape_shell_arg(str))
-	end
-	return table.concat(parts, " ")
-end
-
----@param errors string[]|nil
----@return string[]
-function M.indent_errors(errors, parent_msg)
-	errors = errors or {}
-	errors = vim.tbl_map(function(v)
-		if type(v) == 'string' then
-			return '  ' .. v
-		else
-			return '  ' .. vim.inspect(v)
-		end
-	end, errors or {})
-	table.insert(errors, 1, parent_msg)
-	return errors
 end
 
 ---@param str string
@@ -214,68 +139,10 @@ function M.cmd_to_string_array(cmd)
 	return {}
 end
 
-function M.clean_and_split_lines(lines)
-	local result = {}
-	for _, line in ipairs(lines) do
-		line = line:gsub("\r", "")
-		for part in line:gmatch("([^\n]*)\n?") do
-			if part ~= "" then
-				table.insert(result, part)
-			end
-		end
-	end
-	return result
-end
-
----@param callback fun(lines: string[]) The function to call for complete lines.
----@return fun(chunk: string) feed The function to call whenever new data arrives.
-function M.create_line_buffered_feed(callback)
-	local residue = ""
-	return function(chunk)
-		if not chunk or chunk == "" then
-			return
-		end
-
-		local data = residue .. chunk
-		local start = 1
-		local lines = {}
-
-		while true do
-			local newline_start, newline_end = data:find("\r?\n", start)
-			if not newline_start then
-				break
-			end
-
-			lines[#lines + 1] = data:sub(start, newline_start - 1)
-			start = newline_end + 1
-		end
-
-		residue = data:sub(start)
-
-		if #lines > 0 then
-			callback(lines)
-		end
-	end
-end
-
---- Invalid globs (e.g. a half-typed `*.{lua`) return nil plus the error rather
---- than raising; callers compile globs from live user input.
----@param glob string
----@return vim.regex? regex, string? err
-function M.compile_glob(glob)
-	local ok, res = pcall(function()
-		return vim.regex(vim.fn.glob2regpat(glob))
-	end)
-	if not ok then
-		return nil, tostring(res)
-	end
-	return res
-end
-
 ---@param str string
 ---@param regex_list vim.regex[]
 ---@return boolean
-function M.any_match(str, regex_list)
+local function any_match(str, regex_list)
 	for _, pat in ipairs(regex_list) do
 		if pat:match_str(str) then
 			return true
@@ -294,15 +161,15 @@ function M.check_path_pattern(path, is_dir, include_regex, exclude_regex)
 		path = path:sub(1, #path - 1)
 	end
 	if exclude_regex then
-		if M.any_match(path, exclude_regex) then
+		if any_match(path, exclude_regex) then
 			return false
 		end
-		if is_dir and M.any_match(path .. '/', exclude_regex) then
+		if is_dir and any_match(path .. '/', exclude_regex) then
 			return false
 		end
 	end
 	if include_regex then
-		return M.any_match(path, include_regex)
+		return any_match(path, include_regex)
 	end
 	return true
 end
