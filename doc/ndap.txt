@@ -273,7 +273,9 @@ sessions.
 <
 
 `column` toggles a column breakpoint at the start of the word under the cursor.
-A breakpoint shown in that word is removed; otherwise one is created.
+A breakpoint shown in that word is removed; otherwise one is created. A session
+whose adapter cannot place breakpoints by column is not sent them, and reports
+them unverified.
 
 Once a session is live the adapter may bind a breakpoint to a different line or
 column than requested; the marker follows it, and every command acts on where a

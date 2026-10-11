@@ -447,14 +447,30 @@ function Session:_sync_one_source(source, cb)
     local active_req = {}
     for _, bp in ipairs(breakpoints.for_source(source)) do
         if not bp.disabled then
-            local entry = { line = bp.line }
-            if bp.column then entry.column = bp.column end
-            if bp.condition and self:capable("supportsConditionalBreakpoints") then entry.condition = bp.condition end
-            if bp.hit_condition and self:capable("supportsHitConditionalBreakpoints") then entry.hitCondition = bp
-                .hit_condition end
-            if bp.log_message and self:capable("supportsLogPoints") then entry.logMessage = bp.log_message end
-            active_bps[#active_bps + 1] = bp
-            active_req[#active_req + 1] = entry
+            -- An adapter that cannot place a breakpoint by column (codelldb
+            -- tracks them by line alone) is not sent one; it would keep only the
+            -- last and leave the rest undeletable.
+            if bp.column and not self:capable("supportsBreakpointLocationsRequest") then
+                -- Never asked of the adapter, so nothing here can verify it.
+                local prev = self._bp_status[bp.internal_id]
+                ---@type ndap.dap.BpStatus
+                local st   = {
+                    verified = false,
+                    hits     = prev and prev.hits or 0,
+                    message  = "adapter does not support column breakpoints",
+                }
+                self._bp_status[bp.internal_id] = st
+                self:_emit("breakpoint_updated", bp, st)
+            else
+                local entry = { line = bp.line }
+                if bp.column then entry.column = bp.column end
+                if bp.condition and self:capable("supportsConditionalBreakpoints") then entry.condition = bp.condition end
+                if bp.hit_condition and self:capable("supportsHitConditionalBreakpoints") then entry.hitCondition = bp
+                    .hit_condition end
+                if bp.log_message and self:capable("supportsLogPoints") then entry.logMessage = bp.log_message end
+                active_bps[#active_bps + 1] = bp
+                active_req[#active_req + 1] = entry
+            end
         end
     end
 
