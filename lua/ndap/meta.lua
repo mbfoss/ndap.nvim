@@ -79,7 +79,6 @@ error("do not require a meta file")
 ---@alias ndap.Completion
 ---| "file"     # a file path
 ---| "dir"      # a directory
----| "command"  # a command line, each token completed as a path
 ---| string[]   # the values themselves
 ---| fun(partial: string): string[]
 

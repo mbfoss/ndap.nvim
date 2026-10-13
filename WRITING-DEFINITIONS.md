@@ -28,11 +28,11 @@ return {
             description = "debug a native executable",
             request     = "launch", -- or "attach"
             inputs      = {
-                command = { type = "string", completion = "command", required = true, description = "command line to debug" },
+                command = { type = "list", completion = "file", required = true, description = "argv: the program and its arguments" },
             },
             build       = function(parameters) -- parameters -> DAP body
-                local program, args = require("ndap.shared").split_command(parameters.command)
-                return { program = program, args = args }
+                local argv = parameters.command
+                return { program = argv[1], args = { unpack(argv, 2) } }
             end,
         },
     },
@@ -81,7 +81,7 @@ An `ndap.Input` describes one value:
 | `type` | `"string"` \| `"boolean"` \| `"integer"` \| `"number"` \| `"list"` \| `"map"` | Defaults to `string`. `list` is a table of entries, `map` a table of string keys to values: JSON's `array` and `object` under DAP's names. |
 | `item_type` | as above, scalars only | The entry type of a `list` or `map`. Defaults to `string`. |
 | `required` | `boolean` | Leaving it unset is an error. Defaults to `false`. |
-| `completion` | `"file"` \| `"dir"` \| `"command"` \| `string[]` \| `fun(partial): string[]` | What the value completes with. Suggests only; never rejects a value. |
+| `completion` | `"file"` \| `"dir"` \| `string[]` \| `fun(partial): string[]` | What the value completes with. Suggests only; never rejects a value. |
 | `description` | `string` | A few words on what the input means, shown by `:Ndap new_run_file` and command-line completion. |
 
 ## Modes
@@ -99,17 +99,17 @@ return {
             description = "debug an executable",
             request     = "launch",
             inputs      = {
-                command       = { type = "string",  completion = "command", required = true, description = "command line to debug" },
+                command       = { type = "list",    completion = "file",    required = true, description = "argv: the program and its arguments" },
                 cwd           = { type = "string",  completion = "dir",     description = "working directory" },
                 env           = { type = "map",                             description = "environment variables" },
                 stop_on_entry = { type = "boolean",                         description = "break at program entry" },
             },
             build = function(parameters)
                 local shared = require("ndap.shared")
-                local program, args = shared.split_command(parameters.command)
+                local argv = parameters.command
                 return {
-                    program     = program,
-                    args        = args,
+                    program     = argv[1],
+                    args        = { unpack(argv, 2) },
                     cwd         = shared.normalize_path(parameters.cwd),
                     env         = parameters.env,
                     stopOnEntry = parameters.stop_on_entry,
@@ -139,8 +139,7 @@ No further wiring is needed:
   [ndap-adapters.nvim](https://github.com/mbfoss/ndap-adapters.nvim) differ
   because the adapters do. Every type is one row in
   [inputs.lua](lua/ndap/run/inputs.lua), which every consumer reads.
-- **`completion`**: a named source (`"file"`, `"dir"`, `"command"`, the last
-  completing each token of a command line as a path); the values themselves
+- **`completion`**: a named source (`"file"`, `"dir"`); the values themselves
   (`{ "console", "terminal" }`); or `fun(partial): string[]` when they can only
   be computed. On a `list` or `map` it describes one entry. Only a written-out
   set reaches the scaffolded file, as a comment. A boolean completes as
@@ -247,7 +246,7 @@ same shape one step out, reading the command line from `ctx.parameters`.
 
 ## Helpers
 
-`ndap.shared` carries `split_command`, `normalize_path`, `normalize_paths`,
+`ndap.shared` carries `normalize_path`, `normalize_paths`,
 `resolve_port`, `free_port`, `resolve_pid`, `spawn`, and
 `resolve_path(candidates, accept, opts?)`, which returns the first candidate
 `accept` approves and everything tried:
@@ -265,11 +264,10 @@ that group; treat one as read-only. `free_port()` returns a currently-unused
 port, for an adapter that has to be told one; it errors rather than hand back a
 port nobody can bind.
 
-`shared.split_command(command)` splits a `command` input into the
-`program`/`args` pair a launch body wants, quotes and backslashes included. It
-splits only, passing every token through as written: `~`, `$VAR`, `%`, `#` and
-globs are ordinary characters (`./...` stays `./...`), and a list is used
-verbatim. Expand a token with `normalize_path` when the field is a path.
+A launch `build` reads its `command` input as an argv list, so the program and
+its arguments already arrive separate and no token is expanded: `~`, `$VAR`,
+`%`, `#` and globs are ordinary characters (`./...` stays `./...`). Expand a
+token with `normalize_path` when the field is a path.
 
 An entry is a literal path, never a glob. `$VAR` and `~` expand wherever they
 appear, as `vim.fs.normalize` does elsewhere in Neovim; `${VAR}` braces do not. An

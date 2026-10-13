@@ -164,7 +164,7 @@ self-describing; adapters carry no schema of their own.
 | ---------- | ------------------------------------------------------------------------------ |
 | `type`     | what the input *is*, meaning what `build` receives: `string`/`boolean`/`integer`/`number`, or a collection — `list` (a table of entries, JSON's `array`) or `map` (a table of string keys to values, JSON's `object`). Defaults to `string` |
 | `item_type` | a collection's *entry* type, declared as `type` is but scalars only: `{ type = "list", item_type = "integer" }`. Defaults to `string` |
-| `completion` | what the value completes with: a named source (`"file"`, `"dir"`, `"command"`, the last completing each token of a command line as a path); the values themselves (`{ "console", "terminal" }`); or a `fun(partial): string[]`. A written-out set also reaches the scaffolded file as a comment. Completion only *suggests*; nothing rejects a value written past it. On a collection it describes one entry |
+| `completion` | what the value completes with: a named source (`"file"`, `"dir"`); the values themselves (`{ "console", "terminal" }`); or a `fun(partial): string[]`. A written-out set also reaches the scaffolded file as a comment. Completion only *suggests*; nothing rejects a value written past it. On a collection it describes one entry |
 | `required` | when `true`, the user must supply the value; leaving it unset is a resolve error. Any other unset input arrives at `build` as nil, which `build` may answer by omitting the field or some other way: an attach `build` asks the user to pick a process for an unset `pid`, which is why no adapter marks that input `required` |
 | `description` | a few words on what the input means, e.g. `"process id to attach to"` |
 
@@ -185,8 +185,8 @@ one), and it bought two behaviours a `build` line each expresses.
 #### A string form, and the typed form
 
 - the **string form**, the command line's: `:Ndap run codelldb launch --command
-  ./a.out\ --verbose`. A collection instead takes one token per entry (`--env A=1
-  B=2`), which the parser turns into a table.
+  ./a.out arg1 --cwd /src`. A collection instead takes one token per entry
+  (`--env A=1 B=2`), which the parser turns into a table.
 - the **typed form**, a run file's or an API caller's: a Lua value that already
   has its type — `env = { A = "1" }`, `port = 8080`, `enabled = true`.
 
@@ -204,10 +204,10 @@ completed. Adding a type means adding one row, which every consumer — ndap and
 easytasks alike — reads.
 
 Both forms must describe the *same* value. A transformation into a different shape
-is not a second spelling and does not belong in a row: splitting a command line
-into `program` + `args` lived here as a `shell_args` type until it moved to the
-launch `build`s that wanted it (`shared.split_command`, which splits only — no
-token is expanded, so `~`, `$VAR`, `%`, `#` and globs reach the body as written).
+is not a second spelling and does not belong in a row: a launch `build` reads its
+`command` input as an argv list and takes `program`/`args` from it directly, and
+no token is expanded, so `~`, `$VAR`, `%`, `#` and globs reach the body as
+written.
 
 ### One description, two entry points
 
@@ -266,11 +266,11 @@ user-facing vocabulary (the `--name` flags at `:Ndap run`), not the adapter's. T
 `params.stopOnEntry = parameters.stop_on_entry` is correct.
 
 Which names a mode takes is up to it; there is no portable role vocabulary across
-adapters. By convention a `launch` mode takes one `command` input (a string
-completing as `"command"`) carrying the whole command line, and `build` splits it
-into the adapter's own program/args fields with `shared.split_command` — split
-only, no expansion, since the line's other tokens are arguments rather than paths
-(`./...` is a Go package pattern, not a directory to resolve). The shipped
+adapters. By convention a `launch` mode takes one `command` input of `type =
+"list"`, completing each entry as `"file"`, carrying the program and its
+arguments as separate entries, and `build` takes `program = argv[1]` and `args =
+{ unpack(argv, 2) }`. No entry is expanded, since they are arguments rather than
+paths to resolve (`./...` is a Go package pattern, not a directory). The shipped
 `remote` (under `ndap-adapters/`) is the connect-only shape; the definitions in
 [ndap-adapters.nvim](https://github.com/mbfoss/ndap-adapters.nvim) are worked
 examples of the rest.

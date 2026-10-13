@@ -87,39 +87,6 @@ local function _complete_path(kind)
     end
 end
 
----The head (separator included) and the token after it, split at the last
----whitespace that is *not* escaped: an escaped space belongs to the token being
----typed, a bare one separates it.
----@param line string
----@return string head, string tail
-local function _split_last_token(line)
-    local cut, i = 0, 1
-    while i <= #line do
-        local c = line:sub(i, i)
-        if c == "\\" then
-            i = i + 2 -- the backslash and the character it escapes
-        else
-            if c == " " or c == "\t" then cut = i end
-            i = i + 1
-        end
-    end
-    return line:sub(1, cut), line:sub(cut + 1)
-end
-
----Completion for a command line: paths, for the program and for every argument
----after it. A debuggee is a binary the project built, not a name on `$PATH`, so
----this is `file` completion applied to whichever token is being typed. Tokens
----would be separated by bare whitespace, but the whole command is one `<f-args>`
----argument, so every space in it is escaped and a trailing `a\ ` is a token's own
----space -- not a separator -- completing paths that start with `a `.
----@param partial string
----@return string[]
-local function _complete_command(partial)
-    local head, tail = _split_last_token(partial)
-    return vim.tbl_map(function(v) return head .. _escape_arg(v) end,
-        vim.fn.getcompletion(_completion_pattern(tail), "file"))
-end
-
 ---Completion over a fixed set of values, offering those that extend `partial`.
 ---@param values string[]
 ---@return fun(partial: string): string[]
@@ -146,9 +113,8 @@ M.types = {
 ---rejects one, so a source never changes what `build` receives.
 ---@type table<string, fun(partial: string): string[]>
 M.sources = {
-    file    = _complete_path("file"),
-    dir     = _complete_path("dir"),
-    command = _complete_command,
+    file = _complete_path("file"),
+    dir  = _complete_path("dir"),
 }
 
 -- Resolution: an input, once, as the rows that read it

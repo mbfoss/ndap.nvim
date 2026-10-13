@@ -125,10 +125,10 @@ filling in its inputs with `--name value` flags:
 
 ```vim
 " Launch a native binary under codelldb
-:Ndap run codelldb binary --command ./program\ argument
+:Ndap run codelldb binary --command ./program
 
 " Debug a Python file
-:Ndap run debugpy script --command ./main.py\ argument
+:Ndap run debugpy script --command ./main.py
 
 " Attach to a running process (opens process selector)
 :Ndap run codelldb attach
@@ -194,11 +194,12 @@ run file.
 Each input is a `--name` flag followed by its values: exactly one for a scalar,
 one per argument for a `list`, and one `KEY=VALUE` per argument for a `map`.
 Arguments split on whitespace — quotes are *not* special, and a value containing
-a space is written `\ `, as in `:Ndap run debugpy script --command ./main.py\
---verbose --cwd /tmp/my\ project`. Nothing else is escaped: a comma or backslash
-is literal, and it is a map's first `=` that separates its key from its value. A
-token that starts with `--` always opens the next input, so a `list` entry may
-not begin with `--`:
+a space is written `\ `, as in `:Ndap run gdb binary --command ./my\ app --cwd
+/tmp/my\ project`. Nothing else is escaped: a comma or backslash is literal, and
+it is a map's first `=` that separates its key from its value. A token that
+starts with `--` always opens the next input, so a `list` entry may not begin
+with `--`: a debuggee argument such as `--verbose` cannot be typed here — put it
+in a run file (below), where `command` is a plain list:
 
 ```vim
 :Ndap run gdb binary --command ./app --env RUST_LOG=debug NO_COLOR=1
@@ -221,7 +222,7 @@ return {
   adapter    = "codelldb",     -- an entry in require("ndap").adapters
   mode       = "binary",       -- one of the adapter's named modes
   parameters = {               -- answers to the mode's declared inputs
-    command = "./build/app --verbose",
+    command = { "./build/app", "--verbose" },
     cwd     = vim.fn.getcwd(),
   },
 }
@@ -264,7 +265,7 @@ Everything above is available programmatically:
 local ndap = require("ndap")
 
 -- The run_mode / run_file / new_run_file / run_again entry points
-ndap.run_mode("debugpy", "script", { command = "./main.py" })
+ndap.run_mode("debugpy", "script", { command = { "./main.py" } })
 ndap.run_file("debug.lua")
 ndap.run_again()
 ```

@@ -1,7 +1,5 @@
 -- shared functions - Public API
 
-local str_util = require("ndap.util.strutil")
-
 local M = {}
 
 -- Re-exported so registry adapters (under `ndap-adapters/`) depend only on
@@ -10,17 +8,6 @@ local M = {}
 ---Spawn a command in a terminal buffer; see `ndap.util.term.spawn`.
 ---@type fun(cmd: string|string[], opts: ndap.util.SpawnOpts, bufnr?: integer): ndap.util.TermHandle?, string?
 M.spawn = require("ndap.util.term").spawn
-
----Split a `command` input into the `program`/`args` pair a launch body wants, on
----shell whitespace with quote and backslash handling. Tokens pass through as written
----— `~`, `$VAR`, `%`, `#` and globs are ordinary characters. A list is taken as-is;
----an unset command yields an empty program.
----@param command string|string[]|nil  a command line, or an argument list
----@return string program, string[] args
-function M.split_command(command)
-    local argv = str_util.cmd_to_string_array(command or "")
-    return argv[1] or "", { unpack(argv, 2) }
-end
 
 ---Expand one candidate path from a lookup list: `$VAR` and `~` expand wherever
 ---they appear, as `vim.fs.normalize` does everywhere else, and a relative entry is
