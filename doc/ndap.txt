@@ -324,7 +324,9 @@ Inside the view:
   Key    Action
   ------ ------------------------------------------------------------------
   <CR>   Expand/collapse, select a session, switch to a frame, or jump to a
-         breakpoint’s source
+         frame’s or breakpoint’s source, focusing it
+
+  o      Jump to a frame’s or breakpoint’s source, keeping the view focused
 
   K      Show the full value / frame details / exception info / breakpoint
          details
@@ -399,9 +401,10 @@ INSPECT, DISASSEMBLY & REPL                                *ndap-inspect-repl*
     :Ndap exception_info   " details of the exception at the current stop
 <
 
-In the disassembly view, `<CR>` opens the corresponding source line and `K`
-shows the instruction reference. Breakpoints and stepping become
-instruction-level while it is focused.
+In the disassembly view, `<CR>` opens the corresponding source line and moves
+into it, `o` opens it with the pane keeping focus, and `K` shows the
+instruction reference. Breakpoints and stepping become instruction-level while
+it is focused.
 
 
 RIGHT-CLICK MENU                                             *ndap-popup-menu*

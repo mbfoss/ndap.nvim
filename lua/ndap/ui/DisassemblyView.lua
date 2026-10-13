@@ -545,10 +545,11 @@ end
 -- Source navigation
 
 ---Open the source line the instruction under the cursor maps to, reusing a window
----already showing that file (or the nearest regular window) and focusing it. No-op
----with a warning when the instruction carries no source mapping.
+---already showing that file (or the nearest regular window). `focus` moves the
+---cursor into it; without it the pane keeps focus. No-op without a source mapping.
 ---@private
-function DisassemblyView:_open_source_at_cursor()
+---@param focus boolean
+function DisassemblyView:_open_source_at_cursor(focus)
     if not self:_is_open() then return end
     local ins = self._rows[vim.api.nvim_win_get_cursor(self._win)[1]]
     if not ins then return end
@@ -560,7 +561,7 @@ function DisassemblyView:_open_source_at_cursor()
     end
 
     local col = ins.column and (ins.column - 1) or nil
-    ui_util.smart_open_file(path, line, col, false)
+    ui_util.smart_open_file(path, line, col, focus)
 end
 
 -- Paging
@@ -809,7 +810,8 @@ function DisassemblyView:_setup_keymaps(bufnr)
         vim.keymap.set("n", lhs, rhs, { buffer = bufnr, desc = desc })
     end
 
-    map("<CR>", function() self:_open_source_at_cursor() end, "Open source line")
+    map("<CR>", function() self:_open_source_at_cursor(true) end, "Open source line")
+    map("o", function() self:_open_source_at_cursor(false) end, "Open source line, keeping focus")
     map("K", function() self:_hover() end, "Instruction reference")
 end
 

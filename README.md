@@ -335,7 +335,8 @@ Inside the view:
 
 | Key   | Action                                                                       |
 | ----- | ---------------------------------------------------------------------------- |
-| `<CR>`| Expand/collapse, select a session, switch to a frame, or jump to a breakpoint's source |
+| `<CR>`| Expand/collapse, select a session, switch to a frame, or jump to a frame's or breakpoint's source, focusing it |
+| `o`   | Jump to a frame's or breakpoint's source, keeping the view focused           |
 | `K`   | Show the full value / frame details / exception info / breakpoint details    |
 | `i`   | Add a watch expression, a function breakpoint, or a data breakpoint (on a variable) |
 | `d`   | Remove the watch expression or breakpoint under the cursor                   |
@@ -393,9 +394,10 @@ spawned, the request fails rather than falling back to an integrated terminal.
 :Ndap exception_info   " details of the exception at the current stop
 ```
 
-In the disassembly view, `<CR>` opens the corresponding source line and `K`
-shows the instruction reference. Breakpoints and stepping become
-instruction-level while it is focused.
+In the disassembly view, `<CR>` opens the corresponding source line and moves
+into it, `o` opens it with the pane keeping focus, and `K` shows the instruction
+reference. Breakpoints and stepping become instruction-level while it is
+focused.
 
 ### Right-click menu<!-- tag: popup-menu -->
 

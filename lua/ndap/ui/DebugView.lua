@@ -35,7 +35,10 @@ local UndoStack     = require("ndap.util.UndoStack")
 ---@field session_id number?
 ---@field session_info ndap.client.SessionInfo?
 ---@field is_current boolean?
----@field frame_id   integer?
+---@field frame_id     integer?
+---@field frame_source string?
+---@field frame_line   integer?
+---@field frame_column integer?
 ---@field bp_kind       ("source"|"function"|"exception_filter"|"exception_type"|"data")?
 ---@field bp_id         integer?
 ---@field bp_source     string?
@@ -305,17 +308,26 @@ function DebugView:_init_tree()
                 manager.select_session(data.session_id)
             end
         end,
-        on_selection = function(_, data)
-            if not data then return end
-            if data.kind == "session" and data.session_id then
-                manager.select_session(data.session_id)
-            elseif data.kind == "stackframe" and data.frame_id then
-                manager.select_frame(data.frame_id)
-            elseif data.kind == "breakpoint" and data.bp_kind == "source" and data.bp_source and data.bp_line then
-                ui.smart_open_file(data.bp_source, data.bp_line, nil, false)
-            end
-        end,
+        on_selection = function(_, data) self:_select(data, true) end,
     })
+end
+
+---@private
+---@param data ndap.DebugView.ItemData?
+---@param focus boolean
+function DebugView:_select(data, focus)
+    if not data then return end
+    if data.kind == "session" and data.session_id then
+        manager.select_session(data.session_id)
+    elseif data.kind == "stackframe" and data.frame_id then
+        manager.select_frame(data.frame_id)
+        if focus and data.frame_source then
+            local col = data.frame_column and (data.frame_column - 1) or nil
+            ui.smart_open_file(data.frame_source, data.frame_line, col, true)
+        end
+    elseif data.kind == "breakpoint" and data.bp_kind == "source" and data.bp_source and data.bp_line then
+        ui.smart_open_file(data.bp_source, data.bp_line, nil, focus)
+    end
 end
 
 -- Signal subscriptions
@@ -607,12 +619,15 @@ function DebugView:_load_stack(ctx)
                 expandable = false,
                 expanded = false,
                 data = {
-                    kind       = "stackframe",
-                    path       = path,
-                    name       = frame.name or "<frame>",
-                    frame_id   = frame.id,
-                    is_current = current_frame and frame.id == current_frame.id or false,
-                    greyout    = false,
+                    kind         = "stackframe",
+                    path         = path,
+                    name         = frame.name or "<frame>",
+                    frame_id     = frame.id,
+                    frame_source = frame.source and frame.source.path or nil,
+                    frame_line   = frame.line,
+                    frame_column = frame.column,
+                    is_current   = current_frame and frame.id == current_frame.id or false,
+                    greyout      = false,
                 },
             }
         end
@@ -1174,6 +1189,11 @@ function DebugView:_setup_keymaps(bufnr)
         end, { buffer = bufnr, desc = desc })
     end
 
+    map("o", "Jump to a frame or breakpoint source, keeping focus", function()
+        local cur = self._tree:get_cursor_item()
+        if cur then self:_select(cur.data, false) end
+    end)
+
     map("i", "Add watch expression / function breakpoint / toggle data breakpoint", function()
         local cur = self._tree:get_cursor_item()
         if not cur then return end
@@ -1411,7 +1431,8 @@ function DebugView:_setup_keymaps(bufnr)
 
     map("g?", "Show keymaps", function()
         hover.show(table.concat({
-            "<CR>  Select session / switch frame / jump to breakpoint source",
+            "<CR>  Select session / switch frame / jump to breakpoint source, focusing it",
+            "o     Jump to a frame or breakpoint source, keeping focus",
             "K     Show full value / session info / frame details / breakpoint details",
             "i     Add: watch expression (expressions) / function breakpoint (breakpoints) / data breakpoint (variable)",
             "d     Remove watch expression or breakpoint (visual: all selected)",
