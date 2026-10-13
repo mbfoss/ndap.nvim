@@ -82,8 +82,8 @@ TreeBuffer.__index = TreeBuffer
 ---@return ndap.util.TreeBuffer
 function TreeBuffer.new(opts)
     local indent_str = opts.indent_string or "  "
-    local expand_symbol = opts.expand_symbol or "\u{F0142}"
-    local collapse_symbol = opts.collapse_symbol or "\u{F0140}"
+    local expand_symbol = opts.expand_symbol or "\u{EAB6}"
+    local collapse_symbol = opts.collapse_symbol or "\u{EAB4}"
     local expand_symbol_width = vim.fn.strdisplaywidth(expand_symbol)
     -- The two icons share one column, so a tree must not change width when a
     -- node is toggled: demand equal display widths.
