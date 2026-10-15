@@ -90,9 +90,9 @@ local function _disown()
     _win, _shown = nil, nil
     if win and vim.api.nvim_win_is_valid(win) then
         -- fixedwin may have moved the pin to the width (window moved to the side)
-        if vim.wo[win].winfixwidth then
+        if vim.wo[win][0].winfixwidth then
             _ratio = vim.api.nvim_win_get_width(win) / vim.o.columns
-        elseif vim.wo[win].winfixheight then
+        elseif vim.wo[win][0].winfixheight then
             _ratio = vim.api.nvim_win_get_height(win) / vim.o.lines
         end
         _win_setlocal(win, "winfixheight", nil)

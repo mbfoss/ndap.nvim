@@ -1,18 +1,23 @@
 local M = {}
 
--- `vim.wo[win].opt = val` acts like `:set` (see `:h vim.wo`): it writes the
--- option's global value too, so freshly created windows -- floats especially --
--- inherit our settings. Force `scope = "local"` to confine them to `win`.
+-- Window options are written local-first: `vim.wo[win][0][opt] = val` touches
+-- `win` alone. `vim.wo[win][opt] = val` acts like `:set` (see `:h vim.wo`) and
+-- writes the option's global value too, so freshly created windows -- floats
+-- especially -- would inherit our settings.
+--
+-- This is that write for an option named at runtime, plus the `nil` case below,
+-- which the index form cannot express.
 ---@param win integer
 ---@param opt string
 ---@param val any  nil resets the option to its global value
 function M.win_setlocal(win, opt, val)
     if val == nil then
-        -- the API ignores nil; `:setlocal opt<` resets to the global value
+        -- `= nil` sets "" rather than handing the option back to its global
+        -- value; `:setlocal opt<` is what does that.
         vim.api.nvim_win_call(win, function() vim.cmd("setlocal " .. opt .. "<") end)
         return
     end
-    vim.api.nvim_set_option_value(opt, val, { win = win, scope = "local" })
+    vim.wo[win][0][opt] = val
 end
 
 ---Whether `winid` is a normal, editable window: valid, not a float/popup, and not
@@ -22,8 +27,8 @@ end
 local function _is_regular_win(winid)
     if not vim.api.nvim_win_is_valid(winid) then return false end
     local cfg = vim.api.nvim_win_get_config(winid)
-    if cfg.relative ~= "" then return false end      -- skip popups
-    if vim.wo[winid].winfixbuf then return false end -- skip fixed windows
+    if cfg.relative ~= "" then return false end         -- skip popups
+    if vim.wo[winid][0].winfixbuf then return false end -- skip fixed windows
     return true
 end
 
