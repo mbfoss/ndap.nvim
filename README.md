@@ -109,6 +109,7 @@ require("ndap").setup({}) -- required; pass options here
 {
   "mbfoss/ndap.nvim",
   dependencies = { "mbfoss/ndap-adapters.nvim" },  -- ready-made adapter definitions
+  lazy = false, -- setup() registers :Ndap and restores saved breakpoints
   opts = {}, -- required; passed to require("ndap").setup()
 }
 ```
