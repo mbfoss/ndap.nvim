@@ -210,17 +210,28 @@ local function _parse_run_args(tokens)
 
     local parameters, seen, i = {}, {}, 3
     while i <= #tokens do
-        local name = tokens[i]:match("^%-%-(.+)$")
+        local flag = tokens[i]
+        local name = flag:match("^%-%-(.+)$")
         local spec = name and declared[name]
         if not spec then
+            -- `--name=value` is a spelling the command line does not have: a
+            -- value is its own argument. The token fits both readings, so the
+            -- message names both, the input's and the debuggee's.
+            local head = flag:match("^%-%-([^=]+)=")
+            if head and declared[head] then
+                vim.notify(("[ndap] run: --%s takes its value as its own argument, "
+                    .. "--%s <value> (or `-- %s` for the debuggee)"):format(
+                    head, head, flag), vim.log.levels.WARN)
+                return
+            end
             -- Either a mistyped input or a value spelled like one (a debuggee's
             -- own `--verbose`); the hint names the escape for the second reading.
             local hint = ""
             if name then
-                hint = (" (for a value, write `-- %s`)"):format(tokens[i])
+                hint = (" (for a value, write `-- %s`)"):format(flag)
             end
             vim.notify(("[ndap] run: expected a declared input, got '%s'%s; declared: %s"):format(
-                tokens[i], hint, table.concat(schema.mode_input_names(adapter, mode), ", ")),
+                flag, hint, table.concat(schema.mode_input_names(adapter, mode), ", ")),
                 vim.log.levels.WARN)
             return
         end
@@ -444,7 +455,7 @@ end
 
 -- Execution and completion take the same split: the user command's `opts.fargs`
 -- on the way in, and `nvim_parse_cmd` (the same <f-args> rules) on the way out.
--- A `\ ` escapes a space; quotes and every other backslash are literal.
+-- A backslash escapes a space or another backslash; quotes are literal.
 
 ---A completion callback for a subcommand: the command name, the fargs after it
 ---(up to the token being completed), and that token.
