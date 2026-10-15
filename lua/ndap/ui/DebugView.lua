@@ -818,6 +818,8 @@ function DebugView:_eval_expression(ctx, expr_obj)
         self._tree:set_item_expandable(item_id, has_ref or false)
         if not has_ref then
             self._tree:remove_children(item_id)
+        elseif item.expanded then
+            self:_load_children(ctx, sess, data.variablesReference, item_id, data.path)
         end
     end)
 end
