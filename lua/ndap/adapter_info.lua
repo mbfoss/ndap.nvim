@@ -158,7 +158,7 @@ function M.overview()
     for _, name in ipairs(names) do out[#out + 1] = "- `" .. name .. "`" end
     vim.list_extend(out, {
         "",
-        ":Ndap adapter_info <adapter> loads one and reports its modes, inputs and tooling",
+        "Use `:Ndap adapter_info <adapter>` to load an adapter module and report its modes and inputs",
     })
     return out
 end
