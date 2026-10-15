@@ -193,22 +193,29 @@ run file.
 
 Each input is a `--name` flag followed by its values: exactly one for a scalar,
 one per argument for a `list`, and one `KEY=VALUE` per argument for a `map`.
-Arguments split on whitespace — quotes are *not* special, and a value containing
-a space is written `\ `, as in `:Ndap run gdb binary --command ./my\ app --cwd
+Arguments split on whitespace: quotes are *not* special, and a value containing a
+space is written `\ `, as in `:Ndap run gdb binary --command ./my\ app --cwd
 /tmp/my\ project`. Nothing else is escaped: a comma or backslash is literal, and
-it is a map's first `=` that separates its key from its value. A token that
-starts with `--` always opens the next input, so a `list` entry may not begin
-with `--`: a debuggee argument such as `--verbose` cannot be typed here — put it
-in a run file (below), where `command` is a plain list:
+it is a map's first `=` that separates its key from its value.
+
+A token of the form `--name` must name one of the mode's inputs, and opens it. A
+value that looks the same, such as a debuggee's own `--verbose`, is written after
+a bare `--`, which marks the token following it as a value however it is spelled:
 
 ```vim
+:Ndap run gdb binary --command ./app -- --verbose
+:Ndap run gdb binary --command ./app -- --verbose -- --config=/x
 :Ndap run gdb binary --command ./app --env RUST_LOG=debug NO_COLOR=1
 :Ndap run remote connect --host 127.0.0.1 --port 4711
 ```
 
+One `--` marks one token, so a run of `--`-prefixed arguments takes one each. A
+trailing `--` marks nothing, and a `--` with no input open is refused.
+
 **Tab-completion** offers adapters, then mode names, then the inputs available
 for the chosen mode as `--name`, and a value once a flag is open: paths for the
-path-like ones, `true`/`false` for a boolean.
+path-like ones, `true`/`false` for a boolean. A token after a bare `--` completes
+as a value, `--`-prefixed or not.
 
 ### Run files
 

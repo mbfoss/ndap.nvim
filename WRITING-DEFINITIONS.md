@@ -138,7 +138,9 @@ No further wiring is needed:
   documentation decides which; the two shipped in
   [ndap-adapters.nvim](https://github.com/mbfoss/ndap-adapters.nvim) differ
   because the adapters do. Every type is one row in
-  [inputs.lua](lua/ndap/run/inputs.lua), which every consumer reads.
+  [inputs.lua](lua/ndap/run/inputs.lua), which every consumer reads. An input
+  whose entries are a tool's own flags stays typable at `:Ndap run`, since a
+  `--`-prefixed entry follows a bare `--`: `--rdbg_args -- --session-name=api`.
 - **`completion`**: a named source (`"file"`, `"dir"`); the values themselves
   (`{ "console", "terminal" }`); or `fun(partial): string[]` when they can only
   be computed. On a `list` or `map` it describes one entry. Only a written-out

@@ -190,11 +190,13 @@ local function _parse_input_group(spec, group)
 end
 
 ---Read `:Ndap run <adapter> <mode> [--input value …] …` from the fargs after
----`run`. The adapter and mode are the first two positionals; each later token
----that starts with `--` names a declared input, and the tokens up to the next
----`--` are its values (one for a scalar, any number for a list, a `KEY=VALUE`
----each for a map). Names are checked against the mode here, so a typo is
----refused before the run starts.
+---`run`. The adapter and mode are the first two positionals; each later token of
+---the form `--name` must name a declared input, and the tokens up to the next
+---one are its values (one for a scalar, any number for a list, a `KEY=VALUE`
+---each for a map). A bare `--` marks the one token after it as a value, however
+---that token is spelled, which is the only way to write a value that is itself
+---`--`-prefixed. Names are checked against the mode here, so a typo is refused
+---before the run starts.
 ---@param tokens string[]  the fargs after `run`
 ---@return string? adapter, string? mode, table<string, any>? parameters
 local function _parse_run_args(tokens)
@@ -211,9 +213,15 @@ local function _parse_run_args(tokens)
         local name = tokens[i]:match("^%-%-(.+)$")
         local spec = name and declared[name]
         if not spec then
-            local known = table.concat(schema.mode_input_names(adapter, mode), ", ")
-            vim.notify(("[ndap] run: expected a declared input, got '%s'%s"):format(
-                tokens[i], name and ("; declared: " .. known) or ""), vim.log.levels.WARN)
+            -- Either a mistyped input or a value spelled like one (a debuggee's
+            -- own `--verbose`); the hint names the escape for the second reading.
+            local hint = ""
+            if name then
+                hint = (" (for a value, write `-- %s`)"):format(tokens[i])
+            end
+            vim.notify(("[ndap] run: expected a declared input, got '%s'%s; declared: %s"):format(
+                tokens[i], hint, table.concat(schema.mode_input_names(adapter, mode), ", ")),
+                vim.log.levels.WARN)
             return
         end
         if seen[name] then
@@ -223,9 +231,22 @@ local function _parse_run_args(tokens)
         seen[name] = true
         local group = {}
         i = i + 1
-        while i <= #tokens and not tokens[i]:match("^%-%-") do
-            group[#group + 1] = tokens[i]
-            i = i + 1
+        while i <= #tokens do
+            local tok = tokens[i]
+            if tok == "--" then
+                -- Marks one token as a value. `-- --` is therefore how a value
+                -- that is itself `--` is written, and a trailing `--` marks
+                -- nothing, as it does everywhere else.
+                i = i + 1
+                if tokens[i] == nil then break end
+                group[#group + 1] = tokens[i]
+                i = i + 1
+            elseif tok:match("^%-%-") then
+                break
+            else
+                group[#group + 1] = tok
+                i = i + 1
+            end
         end
         local value, err = _parse_input_group(spec, group)
         if err then
@@ -337,7 +358,8 @@ end
 
 ---Completion for `:Ndap run …`: the adapter, then the mode, then each declared
 ---input as `--name`, and a value once a flag is open (paths, true/false, a fixed
----set). `--` starts a flag, so a value position is only completed off a `--`.
+---set). `--` starts a flag, so a value position is only completed off a `--`
+---name or a bare `--` marker, which is what marks the next token as a value.
 ---@param schema table
 ---@param toks string[]     the fargs after `run`, up to the token being completed
 ---@param arg_lead string   the token being completed
@@ -348,20 +370,29 @@ local function _run_complete(schema, toks, arg_lead)
     if not mode_name then return schema.mode_names(adapter) end
 
     -- The last `--name` is the open input; count the values it has taken since.
+    -- A bare `--` makes the token after it a value, spelled however it is.
     local declared = schema.mode_inputs(adapter, mode_name)
-    local open, taken, supplied = nil, 0, {}
+    local open, taken, supplied, raw = nil, 0, {}, false
     for i = 3, #toks do
-        local name = toks[i]:match("^%-%-(.+)$")
-        if name then
-            open, taken, supplied[name] = name, 0, true
-        elseif open then
-            taken = taken + 1
+        local tok = toks[i]
+        if raw then
+            raw, taken = false, taken + 1
+        elseif tok == "--" then
+            raw = true
+        else
+            local name = tok:match("^%-%-(.+)$")
+            if name then
+                open, taken, supplied[name] = name, 0, true
+            elseif open then
+                taken = taken + 1
+            end
         end
     end
 
     local spec = open and declared[open]
     local collection = spec and (spec.type == "list" or spec.type == "map")
-    if spec and not arg_lead:match("^%-%-") and (collection or taken == 0) then
+    -- A marked token is a value however it starts, including `--`-prefixed.
+    if spec and (collection or taken == 0) and (raw or not arg_lead:match("^%-%-")) then
         return _complete_input_value(spec, arg_lead)
     end
 

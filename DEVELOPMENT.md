@@ -186,7 +186,9 @@ one), and it bought two behaviours a `build` line each expresses.
 
 - the **string form**, the command line's: `:Ndap run codelldb launch --command
   ./a.out arg1 --cwd /src`. A collection instead takes one token per entry
-  (`--env A=1 B=2`), which the parser turns into a table.
+  (`--env A=1 B=2`), which the parser turns into a table. A value spelled like an
+  input, such as a debuggee's `--verbose`, follows a bare `--`, which marks one
+  token as a value whatever it looks like.
 - the **typed form**, a run file's or an API caller's: a Lua value that already
   has its type — `env = { A = "1" }`, `port = 8080`, `enabled = true`.
 
