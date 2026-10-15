@@ -909,7 +909,7 @@ function M.debug.frame()
             data      = data,
             -- The location is context, not something to match on: it rides
             -- under the frame name so only the name takes part in filtering.
-            virt_line = loc and { { loc, "@namespace" } } or nil,
+            virt_line = loc and { { loc, "@module" } } or nil,
         }
     end
     select.open({
