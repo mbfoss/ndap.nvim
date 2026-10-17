@@ -16,7 +16,7 @@ local str_util    = require("ndap.util.strutil")
 ---@field name                   string
 ---@field adapter?               string  adapter name (for adapterID / display)
 ---@field type?                  string  DAP adapterID override
----@field command?               string|string[]
+---@field command?               string|string[]  executable and args; a string splits on whitespace
 ---@field cwd?                   string
 ---@field env?                   table<string,string>
 ---@field host?                  string
@@ -293,11 +293,9 @@ function M._start_stdio(config, callbacks, progress)
         return
     end
 
-    -- A string command may carry args (e.g. "python3 -m debugpy"); split it on
-    -- shell whitespace so the first token is the executable and the rest are args.
-    local cmd = type(config.command) == "table"
-        and config.command --[[@as string[] ]]
-        or str_util.split_shell_args(config.command --[[@as string]])
+    -- A string command may carry args (e.g. "python3 -m debugpy"); it becomes
+    -- the executable followed by its args.
+    local cmd = str_util.cmd_to_string_array(config.command)
 
     -- Pre-flight: the most common first-run failure is a missing adapter binary.
     -- Catch it here with a friendly message instead of a raw Lua error from

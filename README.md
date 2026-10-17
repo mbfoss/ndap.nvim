@@ -511,6 +511,8 @@ require("ndap").setup({
   -- run the debuggee in an external terminal; its command line is
   -- appended. Unset, an integrated terminal is used instead.
   -- E.g. { "alacritty", "-e" }.
+  -- A string is split on whitespace and quote characters are
+  -- ordinary, so a path with spaces needs the list form.
   -- external_terminal = { "wezterm", "start", "--" },
 
   -- Add a "Debug Inspect" entry to the right-click menu while a session is
@@ -698,6 +700,10 @@ return {
   },
 }
 ```
+
+`command` may also be a string, which is split on whitespace and passed through
+verbatim otherwise: quote characters are ordinary, so an adapter whose path or
+arguments contain whitespace needs the list form.
 
 `require("ndap").adapters` is writable, so a definition can also be registered
 by hand from a config file (`require("ndap").adapters.myadapter = { … }`)

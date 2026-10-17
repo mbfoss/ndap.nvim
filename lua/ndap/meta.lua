@@ -98,7 +98,7 @@ error("do not require a meta file")
 ---@field build?       fun(parameters: table<string, any>): table?, table|string?  the DAP request body, plus an optional host/port the run should connect to; or nil and a message to abort
 
 ---@class ndap.AdapterDef
----@field command?               string|string[]
+---@field command?               string|string[]  executable and args; a string splits on whitespace, so arguments with whitespace need the list form
 ---@field cwd?                   string
 ---@field env?                   table<string,string>
 ---@field host?                  string   ignored when `command` is set
