@@ -1,6 +1,6 @@
 .DS_Store
 .ndap.json
 /assets
-/demo-out
+/data/demo-out
 /.claude
-/demo/out/
+/data/demo/out/

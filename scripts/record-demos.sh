@@ -1,10 +1,10 @@
 #!/usr/bin/env sh
-# Record the README demos from demo/scenes/*.scene with nvim-demo.
+# Record the README demos from data/demo/scenes/*.scene with nvim-demo.
 #
 #   scripts/record-demos.sh                          # every scene
-#   scripts/record-demos.sh demo/scenes/01-*.scene   # selected scenes
+#   scripts/record-demos.sh data/demo/scenes/01-*.scene   # selected scenes
 #
-# Each scene writes its GIF and cast to demo/out/. Needs nvim, agg, pyte and an
+# Each scene writes its GIF and cast to data/demo/out/. Needs nvim, agg, pyte and an
 # interpreter with debugpy. nvim-demo
 # (https://github.com/mbfoss/nvim-demo-tool) is cloned into
 # $XDG_CACHE_HOME/ndap.nvim when missing. Set NVIM_DEMO to a checkout's
@@ -31,14 +31,14 @@ fi
 work=$cache/work
 rm -rf "$work"
 mkdir -p "$work"
-cp "$root/demo/series.py" "$work/series.py"
+cp "$root/data/demo/series.py" "$work/series.py"
 git -C "$work" init -q
 git -C "$work" add series.py
 git -C "$work" -c user.email=demo@example.com -c user.name=demo commit -qm series
 
-mkdir -p "$root/demo/out"
+mkdir -p "$root/data/demo/out"
 if [ "$#" -eq 0 ]; then
-    set -- "$root"/demo/scenes/*.scene
+    set -- "$root"/data/demo/scenes/*.scene
 fi
 
 for scene in "$@"; do

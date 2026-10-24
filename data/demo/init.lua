@@ -1,7 +1,7 @@
 -- Minimal init for the README recordings: only ndap, the debugpy adapter and
 -- the demo source, so a GIF shows the plugin and nothing else.
 local demo = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h")
-local root = vim.fn.fnamemodify(demo .. "/..", ":p")
+local root = vim.fn.fnamemodify(demo .. "/../..", ":p")
 
 vim.opt.rtp:append(root) -- ndap.nvim itself
 vim.opt.rtp:append(os.getenv("NDAP_ADAPTERS")
